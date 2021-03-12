@@ -29,8 +29,9 @@ You may opt to use a webcam for tool alignment, but this approach (while reliabl
 10. *Did we mention its a graphical interface now?*
 
 # What's included in this package?
-1. **TAMV**: the main interface for automated X/Y offset tool alignment using computer vision
-2. **ZTATP**: a second program that uses electrical touch plates to physically measure tool Z offsets using your Duet controller's endstop inputs
+1. **TAMV_GUI.py**: the main interface for automated X/Y offset tool alignment using computer vision
+2. **ZTATP.py**: a second program that uses electrical touch plates to physically measure tool Z offsets using your Duet controller's endstop inputs
+3. **TAMV.py**: the "original" command line version of TAMV, which also includes data export and repeatability testing
 
 # What do I need to run TAMV?
 1. **A fully functional tool changer platform running RepRapFirmware 2.0.5 or 3.2+**  
