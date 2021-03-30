@@ -1628,7 +1628,7 @@ class App(QMainWindow):
             options['printer'] = []
             options['printer'].append( {
                 'address': 'http://localhost',
-                'name': 'Hermoine'
+                'name': 'Default'
             } )
             try:
                 camera_width = 640
