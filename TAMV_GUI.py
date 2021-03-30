@@ -490,6 +490,7 @@ class CalibrateNozzles(QThread):
     _running = False
     display_crosshair = False
     detection_on = False
+    align_endstop = False
 
     def __init__(self, parent=None, th1=1, th2=50, thstep=1, minArea=600, minCircularity=0.8,numTools=0,cycles=1, align=False):
         super(QThread,self).__init__(parent=parent)
@@ -701,8 +702,40 @@ class CalibrateNozzles(QThread):
                         self._running = False
                         self.detection_error.emit(str(mn1))
                         self.cap.release()
+            elif self.align_endstop:
+                print('Starting auto-CP detection..')
+                self.status_update.emit('Starting auto-CP detection..')
+                self._running = True
+                while self._running:
+                    # process GUI events
+                    app.processEvents()
+                    # Update status bar
+                    self.status_update.emit('Self-calibrating CP...')
+                    # Unload tool to start and restore starting position
+                    self.cp_coords = self.parent().printer.getCoords()
+                    self.parent().printer.gCode('T-1')
+                    # Update message bar
+                    self.message_update.emit('Searching for endstop..')
+                    # Process runtime algorithm changes
+                    # Analyze frame for blobs
+                    self.calibrateTool(tool='endstop', rep=1)
+                    # process GUI events
+                    app.processEvents()
+                    # Capture new position as CP
+                    self.parent().cp_coords = self.parent().printer.getCoords()
+                    # signal end of execution
+                    self._running = False
+                    self.align_endstop = False
+                # Update status bar
+                self.status_update.emit('CP auto-calibrated.')
+                self.parent().printer.gCode('T-1')
+                self.parent().printer.gCode('G1 X' + str(self.parent().cp_coords['X']))
+                self.parent().printer.gCode('G1 Y' + str(self.parent().cp_coords['Y']))
+                self.parent().printer.gCode('G1 Z' + str(self.parent().cp_coords['Z']))
+                self._running = False
+                print('CP auto-calibrated.')
             else:
-                while not self.detection_on:
+                while not self.detection_on and not self.align_endstop:
                     try:
                         self.ret, self.cv_img = self.cap.read()
                         if self.ret:
@@ -841,6 +874,63 @@ class CalibrateNozzles(QThread):
         else:
             return
 
+    def analyzeEndstop(self):
+        # Placeholder coordinates
+        xy = [0,0]
+        # Counter of frames with no circle.
+        nocircle = 0
+        # Random time offset
+        rd = int(round(time.time()*1000))
+        while True:
+            app.processEvents()
+            self.ret, self.frame = self.cap.read()
+            if not self.ret:
+                # reset capture
+                self.cap.open(video_src)
+                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, camera_width)
+                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_height)
+                self.cap.set(cv2.CAP_PROP_BUFFERSIZE,1)
+                continue
+                # capture tool location in machine space before processing
+                toolCoordinates = self.parent().printer.getCoords()
+            # capture first clean frame for display
+            cleanFrame = self.frame
+            # apply endstop detection algorithm
+            yuv = cv2.cvtColor(cleanFrame, cv2.COLOR_BGR2YUV)
+            yuvPlanes = cv2.split(yuv)
+            still = yuvPlanes[0]
+            
+            black = np.zeros((still.shape[0],still.shape[1]), np.uint8)
+            black2 = black.copy()
+            kernel = np.ones((5,5),np.uint8)
+
+            img_blur = cv2.GaussianBlur(still, (9, 9), 3)
+            img_canny = cv2.Canny(img_blur, 50, 190)
+            img_dilate = cv2.morphologyEx(img_canny, cv2.MORPH_DILATE, kernel, iterations=3)
+
+            cnt, hierarchy = cv2.findContours(img_dilate, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+            black = cv2.drawContours(black, cnt, -1, (255, 0, 255), -1)
+            black = cv2.morphologyEx(black, cv2.MORPH_DILATE, kernel, iterations=2)
+            cnt2, hierarchy2 = cv2.findContours(black, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+            if len(cnt2) > 0:
+                myContours = []
+                for k in range(len(cnt2)):
+                    if hierarchy2[0][k][3] > -1:
+                        myContours.append(cnt2[k])
+                if len(myContours) > 0:
+                    blobContours = max(myContours, key=lambda el: cv2.contourArea(el))
+                    if len(blobContours) > 0:
+                        M = cv2.moments(blobContours)
+                        center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+                        self.frame = cv2.circle(self.frame, center, 150, (255,0,0), 5)
+                        self.frame = cv2.circle(self.frame, center, 5, (255,0,255), 2)
+                        self.change_pixmap_signal.emit(self.frame)
+                        return ( center, self.parent().printer.getCoords() )
+            else:
+                self.parent().updateStatusbar('Cannot find endstop! Cancel.')
+                self.change_pixmap_signal.emit(self.frame)
+            continue
+
     def calibrateTool(self, tool, rep):
         # timestamp for caluclating tool calibration runtime
         self.startTime = time.time()
@@ -869,7 +959,8 @@ class CalibrateNozzles(QThread):
         if len(self.transform_matrix) > 1:
             # set state flag to Step 2: nozzle alignment stage
             self.state = 200
-            self.parent().debugString += '\nCalibrating T'+str(tool)+':C'+str(rep)+': '
+            if tool not in "endstop":
+                self.parent().debugString += '\nCalibrating T'+str(tool)+':C'+str(rep)+': '
         
         # Space coordinates
         self.space_coordinates = []
@@ -877,7 +968,11 @@ class CalibrateNozzles(QThread):
         self.calibration_moves = 0
 
         while True:
-            (self.xy, self.target, self.tool_coordinates, self.radius) = self.analyzeFrame()
+            if tool not in "endstop":
+                (self.xy, self.target, self.tool_coordinates, self.radius) = self.analyzeFrame()
+            else:
+                (self.xy, self.tool_coordinates) = self.analyzeEndstop()
+            
             # analyzeFrame has returned our target coordinates, average its location and process according to state
             self.average_location[0] += self.xy[0]
             self.average_location[1] += self.xy[1]
@@ -892,7 +987,10 @@ class CalibrateNozzles(QThread):
                 # round to 3 decimal places
                 self.average_location = np.around(self.average_location,3)
                 # get another detection validated
-                (self.xy, self.target, self.tool_coordinates, self.radius) = self.analyzeFrame()
+                if tool not in "endstop":
+                    (self.xy, self.target, self.tool_coordinates, self.radius) = self.analyzeFrame()
+                else:
+                    (self.xy, self.tool_coordinates) = self.analyzeEndstop()
                 
                 #### Step 1: camera calibration and transformation matrix calculation
                 if self.state == 0:
@@ -950,7 +1048,8 @@ class CalibrateNozzles(QThread):
                     print('Camera calibration completed in ' + str(calibration_time) + ' seconds.')
                     # Update GUI thread with current status and percentage complete
                     self.message_update.emit('Calibrating rotation.. (100%) - MPP = ' + str(self.mpp))
-                    self.status_update.emit('Calibrating T' + str(tool) + ', cycle: ' + str(rep+1) + '/' + str(self.cycles))
+                    if tool not in "endstop":
+                        self.status_update.emit('Calibrating T' + str(tool) + ', cycle: ' + str(rep+1) + '/' + str(self.cycles))
                     # save position as previous position
                     self.oldxy = self.xy
                     # save machine coordinates for detected nozzle
@@ -969,13 +1068,19 @@ class CalibrateNozzles(QThread):
                     self.state = 200
                     # start tool calibration timer
                     self.startTime = time.time()
-                    self.parent().debugString += '\nCalibrating T'+str(tool)+':C'+str(rep)+': '
+                    if tool not in "endstop":
+                        self.parent().debugString += '\nCalibrating T'+str(tool)+':C'+str(rep)+': '
+                    else:
+                        self.parent().debugString += '\nCP Autocalibration..'
                     continue
                 #### Step 2: nozzle alignment stage
                 elif self.state == 200:
                     # Update GUI thread with current status and percentage complete
-                    self.message_update.emit('Tool calibration move #' + str(self.calibration_moves))
-                    self.status_update.emit('Calibrating T' + str(tool) + ', cycle: ' + str(rep+1) + '/' + str(self.cycles))
+                    if tool not in "endstop":
+                        self.message_update.emit('Tool calibration move #' + str(self.calibration_moves))
+                        self.status_update.emit('Calibrating T' + str(tool) + ', cycle: ' + str(rep+1) + '/' + str(self.cycles))
+                    else:
+                        self.message_update.emit('CP calibration move #' + str(self.calibration_moves))
                     # increment moves counter
                     self.calibration_moves += 1
                     # nozzle detected, frame rotation is set, start
@@ -994,39 +1099,53 @@ class CalibrateNozzles(QThread):
                         self.parent().printer.gCode( 'G1 F13200' )
                         # Update GUI with progress
                         # calculate final offsets and return results
-                        self.tool_offsets = self.parent().printer.getG10ToolOffset(tool)
-                        final_x = np.around( (self.cp_coordinates['X'] + self.tool_offsets['X']) - self.tool_coordinates['X'], 3 )
-                        final_y = np.around( (self.cp_coordinates['Y'] + self.tool_offsets['Y']) - self.tool_coordinates['Y'], 3 )
-                        string_final_x = "{:.3f}".format(final_x)
-                        string_final_y = "{:.3f}".format(final_y)
-                        # Save offset to output variable
-                        # HBHBHBHB
-                        _return = {}
-                        _return['X'] = final_x
-                        _return['Y'] = final_y
-                        _return['MPP'] = self.mpp
-                        _return['time'] = np.around(time.time() - self.startTime,1)
-                        self.message_update.emit('Nozzle calibrated: offset coordinates X' + str(_return['X']) + ' Y' + str(_return['Y']) )
-                        self.parent().debugString += 'T' + str(tool) + ', cycle ' + str(rep+1) + ' completed in ' + str(_return['time']) + ' seconds.\n'
-                        print('T' + str(tool) + ', cycle ' + str(rep+1) + ' completed in ' + str(_return['time']) + ' seconds.')
-                        self.message_update.emit('T' + str(tool) + ', cycle ' + str(rep+1) + ' completed in ' + str(_return['time']) + ' seconds.')
+                        if tool not in "endstop":
+                            self.tool_offsets = self.parent().printer.getG10ToolOffset(tool)
+                        else:
+                            #HBHBHB: TODO ADD PROBE OFFSETS TO THIS CALCULATION
+                            self.tool_offsets = {
+                                'X' : 0,
+                                'Y' : 0,
+                                'Z' : 0
+                            }
+                        if tool not in "endstop":    
+                            final_x = np.around( (self.cp_coordinates['X'] + self.tool_offsets['X']) - self.tool_coordinates['X'], 3 )
+                            final_y = np.around( (self.cp_coordinates['Y'] + self.tool_offsets['Y']) - self.tool_coordinates['Y'], 3 )
+                            string_final_x = "{:.3f}".format(final_x)
+                            string_final_y = "{:.3f}".format(final_y)
+                            # Save offset to output variable
+                            # HBHBHBHB
+                            _return = {}
+                            _return['X'] = final_x
+                            _return['Y'] = final_y
+                            _return['MPP'] = self.mpp
+                            _return['time'] = np.around(time.time() - self.startTime,1)
+                            self.message_update.emit('Nozzle calibrated: offset coordinates X' + str(_return['X']) + ' Y' + str(_return['Y']) )
+                            self.parent().debugString += 'T' + str(tool) + ', cycle ' + str(rep+1) + ' completed in ' + str(_return['time']) + ' seconds.\n'
+                            print('T' + str(tool) + ', cycle ' + str(rep+1) + ' completed in ' + str(_return['time']) + ' seconds.')
+                            self.message_update.emit('T' + str(tool) + ', cycle ' + str(rep+1) + ' completed in ' + str(_return['time']) + ' seconds.')
+                        else:
+                            self.message_update.emit('CP auto-calibrated.')
                         self.parent().printer.gCode( 'G1 F13200' )
 
-                        self.parent().debugString += 'G10 P' + str(tool) + ' X' + string_final_x + ' Y' + string_final_y + '\n'
-                        x_tableitem = QTableWidgetItem(string_final_x)
-                        x_tableitem.setBackground(QColor(100,255,100,255))
-                        y_tableitem = QTableWidgetItem(string_final_y)
-                        y_tableitem.setBackground(QColor(100,255,100,255))
-                        self.parent().offsets_table.setItem(tool,0,x_tableitem)
-                        self.parent().offsets_table.setItem(tool,1,y_tableitem)
-                        self.result_update.emit({
-                            'tool': str(tool),
-                            'cycle': str(rep),
-                            'mpp': str(self.mpp),
-                            'X': string_final_x,
-                            'Y': string_final_y
-                        })
-                        return(_return, self.transform_matrix, self.mpp)
+                        if tool not in "endstop":
+                            self.parent().debugString += 'G10 P' + str(tool) + ' X' + string_final_x + ' Y' + string_final_y + '\n'
+                            x_tableitem = QTableWidgetItem(string_final_x)
+                            x_tableitem.setBackground(QColor(100,255,100,255))
+                            y_tableitem = QTableWidgetItem(string_final_y)
+                            y_tableitem.setBackground(QColor(100,255,100,255))
+                            self.parent().offsets_table.setItem(tool,0,x_tableitem)
+                            self.parent().offsets_table.setItem(tool,1,y_tableitem)
+
+                            self.result_update.emit({
+                                'tool': str(tool),
+                                'cycle': str(rep),
+                                'mpp': str(self.mpp),
+                                'X': string_final_x,
+                                'Y': string_final_y
+                            })
+                            return(_return, self.transform_matrix, self.mpp)
+                        else: return
                     else:
                         self.state = 200
                         continue
@@ -1426,12 +1545,22 @@ class App(QMainWindow):
         grid.addWidget(self.calibration_button,7,2,1,1)
         grid.addWidget(self.repeat_label,7,3,1,1)
         grid.addWidget(self.repeatSpinBox,7,4,1,1)
+
+        #HBHBHB: TESTING CP AUTOCALIBRATE
+        self.cp_calibration_button = QPushButton('Auto CP')
+        self.cp_calibration_button.clicked.connect(self.calibrate_CP)
+        self.cp_calibration_button.setDisabled(True)
+        grid.addWidget(self.cp_calibration_button,7,5,1,1)
+
         # set the grid layout as the widgets layout
         self.centralWidget.setLayout(grid)
         # start video feed
         self.startVideo()
         # flag to draw circle
         self.crosshair = False
+
+    def calibrate_CP(self):
+        self.video_thread.align_endstop = True
 
     def toggle_detect(self):
         self.video_thread.display_crosshair = not self.video_thread.display_crosshair
@@ -1749,6 +1878,7 @@ class App(QMainWindow):
         # enable/disable buttons
         self.connection_button.setDisabled(True)
         self.calibration_button.setDisabled(True)
+        self.cp_calibration_button.setDisabled(False)
         self.disconnection_button.setDisabled(False)
         self.cp_button.setDisabled(False)
         self.jogpanel_button.setDisabled(False)
@@ -1862,6 +1992,7 @@ class App(QMainWindow):
         self.video_thread.loose = False
         self.video_thread.xray = False
         self.video_thread.alignment = False
+        self.cp_calibration_button.setDisabled(True)
 
         index = self.toolBoxLayout.count()-1
         while index >= 0:
@@ -1914,6 +2045,7 @@ class App(QMainWindow):
         self.video_thread.alignment = False
         self.calibration_button.setDisabled(False)
         self.cp_button.setDisabled(False)
+        self.cp_calibration_button.setDisabled(False)
 
         self.toolBox.setVisible(True)
         self.repeatSpinBox.setDisabled(False)
@@ -2191,6 +2323,7 @@ class App(QMainWindow):
         self.xray_box.setChecked(False)
         self.loose_box.setDisabled(True)
         self.toolBox.setVisible(False)
+        self.cp_calibration_button.setDisabled(True)
         self.repaint()
         # End video threads and restart default thread
         # Clean up threads and detection
@@ -2279,6 +2412,7 @@ class App(QMainWindow):
         self.loose_box.setVisible(True)
         self.toolBox.setVisible(False)
         self.detect_box.setVisible(False)
+        self.cp_calibration_button.setDisabled(True)
         for i in range(self.num_tools):
             current_tool = self.printer.getG10ToolOffset(i)
             x_tableitem = QTableWidgetItem("{:.3f}".format(current_tool['X']))
