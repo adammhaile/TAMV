@@ -55,6 +55,7 @@ import cv2
 import numpy as np
 import math
 import DuetWebAPI as DWA
+import KlipperAPI as KA
 from time import sleep, time
 import datetime
 import json
@@ -111,12 +112,20 @@ class CPDialog(QDialog):
         self.button_x5.setFixedSize(60,60)
         self.button_x6.setFixedSize(60,60)
         # attach actions
+        '''
         self.button_x1.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X-1 G90'))
         self.button_x2.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X-0.1 G90'))
         self.button_x3.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X-0.01 G90'))
         self.button_x4.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X0.01 G90'))
         self.button_x5.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X0.1 G90'))
         self.button_x6.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X1 G90'))
+        '''
+        self.button_x1.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 X-1','G90']))
+        self.button_x2.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 X-0.1','G90']))
+        self.button_x3.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 X-0.01','G90']))
+        self.button_x4.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 X0.01','G90']))
+        self.button_x5.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 X0.1','G90']))
+        self.button_x6.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 X1','G90']))
         # add buttons to window
         x_label = QLabel('X')
         buttons_layout.addWidget(x_label,0,0)
@@ -142,12 +151,20 @@ class CPDialog(QDialog):
         self.button_y5.setFixedSize(60,60)
         self.button_y6.setFixedSize(60,60)
         # attach actions
+        '''
         self.button_y1.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y-1 G90'))
         self.button_y2.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y-0.1 G90'))
         self.button_y3.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y-0.01 G90'))
         self.button_y4.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y0.01 G90'))
         self.button_y5.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y0.1 G90'))
         self.button_y6.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y1 G90'))
+        '''
+        self.button_y1.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 Y-1','G90']))
+        self.button_y2.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 Y-0.1','G90']))
+        self.button_y3.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 Y-0.01','G90']))
+        self.button_y4.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 Y0.01','G90']))
+        self.button_y5.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 Y0.1','G90']))
+        self.button_y6.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 Y1','G90']))
         # add buttons to window
         y_label = QLabel('Y')
         buttons_layout.addWidget(y_label,1,0)
@@ -173,12 +190,20 @@ class CPDialog(QDialog):
         self.button_z5.setFixedSize(60,60)
         self.button_z6.setFixedSize(60,60)
         # attach actions
+        '''
         self.button_z1.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z-1 G90'))
         self.button_z2.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z-0.1 G90'))
         self.button_z3.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z-0.01 G90'))
         self.button_z4.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z0.01 G90'))
         self.button_z5.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z0.1 G90'))
         self.button_z6.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z1 G90'))
+        '''
+        self.button_z1.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 Z-1','G90']))
+        self.button_z2.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 Z-0.1','G90']))
+        self.button_z3.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 Z-0.01','G90']))
+        self.button_z4.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 Z0.01','G90']))
+        self.button_z5.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 Z0.1','G90']))
+        self.button_z6.clicked.connect(lambda: self.parent().printer.gCodeBatch(['G91','G1 Z1','G90']))
         # add buttons to window
         z_label = QLabel('Z')
         buttons_layout.addWidget(z_label,2,0)
@@ -618,7 +643,8 @@ class CalibrateNozzles(QThread):
                                     self.parent().printer.gCode('G1 Y' + str(self.parent().cp_coords['Y']))
                                     self.parent().printer.gCode('G1 Z' + str(self.parent().cp_coords['Z']))
                                     # Wait for moves to complete
-                                    while self.parent().printer.getStatus() not in 'idle':
+                                    #while self.parent().printer.getStatus() not in 'idle':
+                                    while self.parent().printer.getStatus() not in 'ready':
                                         # process GUI events
                                         app.processEvents()
                                         self.ret, self.cv_img = self.cap.read()
@@ -657,7 +683,8 @@ class CalibrateNozzles(QThread):
                         # HBHBHB
                         # Update debug window with results
                         # self.parent().debugString += '\nCalibration output:\n'
-                        self.parent().printer.gCode('T-1')
+                        #self.printer.gCode('T-1')
+                        self.printer.gCode('TOOL_DROPOFF')
                         self.parent().printer.gCode('G1 X' + str(self.parent().cp_coords['X']))
                         self.parent().printer.gCode('G1 Y' + str(self.parent().cp_coords['Y']))
                         self.parent().printer.gCode('G1 Z' + str(self.parent().cp_coords['Z']))
@@ -746,7 +773,9 @@ class CalibrateNozzles(QThread):
         #self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_height)
         #self.cap.set(cv2.CAP_PROP_BUFFERSIZE,1)
         #self.cap.set(cv2.CAP_PROP_FPS,25)
-
+        
+        #toolCoordinates = None # ADDED TO FIX PROBLEM ??????
+        
         while True and self.detection_on:
             app.processEvents()
             self.ret, self.frame = self.cap.read()
@@ -912,7 +941,8 @@ class CalibrateNozzles(QThread):
                     # move carriage for calibration
                     self.offsetX = self.calibrationCoordinates[0][0]
                     self.offsetY = self.calibrationCoordinates[0][1]
-                    self.parent().printer.gCode('G91 G1 X' + str(self.offsetX) + ' Y' + str(self.offsetY) +' F3000 G90 ')
+                    #self.parent().printer.gCode('G91 G1 X' + str(self.offsetX) + ' Y' + str(self.offsetY) +' F3000 G90 ')
+                    self.parent().printer.gCodeBatch(['G91','G1 X' + str(self.offsetX) + ' Y' + str(self.offsetY) +' F3000','G90'])
                     # Update state tracker to second nozzle calibration move
                     self.state = 1
                     continue
@@ -933,11 +963,13 @@ class CalibrateNozzles(QThread):
                     # return carriage to relative center of movement
                     self.offsetX = -1*self.offsetX
                     self.offsetY = -1*self.offsetY
-                    self.parent().printer.gCode('G91 G1 X' + str(self.offsetX) + ' Y' + str(self.offsetY) +' F3000 G90 ')
+                    #self.parent().printer.gCode('G91 G1 X' + str(self.offsetX) + ' Y' + str(self.offsetY) +' F3000 G90 ')
+                    self.parent().printer.gCodeBatch(['G91','G1 X' + str(self.offsetX) + ' Y' + str(self.offsetY) +' F3000','G90'])
                     # move carriage a random amount in X&Y to collect datapoints for transform matrix
                     self.offsetX = self.calibrationCoordinates[self.state][0]
                     self.offsetY = self.calibrationCoordinates[self.state][1]
-                    self.parent().printer.gCode('G91 G1 X' + str(self.offsetX) + ' Y' + str(self.offsetY) +' F3000 G90 ')
+                    #self.parent().printer.gCode('G91 G1 X' + str(self.offsetX) + ' Y' + str(self.offsetY) +' F3000 G90 ')
+                    self.parent().printer.gCodeBatch(['G91','G1 X' + str(self.offsetX) + ' Y' + str(self.offsetY) +' F3000','G90'])
                     # increment state tracker to next calibration move
                     self.state += 1
                     continue
@@ -964,7 +996,8 @@ class CalibrateNozzles(QThread):
                     self.newCenter = self.transform_matrix.T @ np.array([0, 0, 0, 0, 0, 1])
                     self.guess_position[0]= np.around(self.newCenter[0],3)
                     self.guess_position[1]= np.around(self.newCenter[1],3)
-                    self.parent().printer.gCode('G90 G1 X{0:-1.3f} Y{1:-1.3f} F1000 G90 '.format(self.guess_position[0],self.guess_position[1]))
+                    #self.parent().printer.gCode('G90 G1 X{0:-1.3f} Y{1:-1.3f} F1000 G90 '.format(self.guess_position[0],self.guess_position[1]))
+                    self.parent().printer.gCodeBatch(['G90','G1 X{0:-1.3f} Y{1:-1.3f} F1000'.format(self.guess_position[0],self.guess_position[1]),'G90'])
                     # update state tracker to next phase
                     self.state = 200
                     # start tool calibration timer
@@ -985,8 +1018,9 @@ class CalibrateNozzles(QThread):
                     self.offsets[0] = np.around(self.offsets[0],3)
                     self.offsets[1] = np.around(self.offsets[1],3)
                     # Move it a bit
-                    self.parent().printer.gCode( 'M564 S1' )
-                    self.parent().printer.gCode( 'G91 G1 X{0:-1.3f} Y{1:-1.3f} F1000 G90 '.format(self.offsets[0],self.offsets[1]) )
+                    #self.parent().printer.gCode( 'M564 S1' )
+                    #self.parent().printer.gCode( 'G91 G1 X{0:-1.3f} Y{1:-1.3f} F1000 G90 '.format(self.offsets[0],self.offsets[1]) )
+                    self.parent().printer.gCodeBatch(['G91','G1 X{0:-1.3f} Y{1:-1.3f} F1000'.format(self.offsets[0],self.offsets[1]),'G90'])
                     # save position as previous position
                     self.oldxy = self.xy
                     if ( self.offsets[0] == 0.0 and self.offsets[1] == 0.0 ):
@@ -1066,9 +1100,11 @@ class CalibrateNozzles(QThread):
         try:
             tempCoords = self.printer.getCoords()
             if self.printer.isIdle():
-                self.parent().printer.gCode('T-1')
+                #self.printer.gCode('T-1')
+                self.printer.gCode('TOOL_DROPOFF')
                 self.parent().printer.gCode('G1 X' + str(tempCoords['X']) + ' Y' + str(tempCoords['Y']))
-                while self.parent().printer.getStatus() not in 'idle':
+                #while self.parent().printer.getStatus() not in 'idle':
+                while self.parent().printer.getStatus() not in 'ready':
                     time.sleep(1)
         except: None
         self.cap.release()
@@ -1451,11 +1487,13 @@ class App(QMainWindow):
     def cleanPrinterURL(self, inputString='http://localhost'):
         _errCode = 0
         _errMsg = ''
-        _printerURL = 'http://localhost'
+        #_printerURL = 'http://localhost'
+        _printerURL = inputString
         from urllib.parse import urlparse
         u = urlparse(inputString)
         scheme = u[0]
         netlocation = u[1]
+        '''
         if len(scheme) < 4 or scheme.lower() not in ['http']:
             _errCode = 1
             _errMsg = 'Invalid scheme. Please only use http connections.'
@@ -1467,6 +1505,7 @@ class App(QMainWindow):
             _errMsg = 'Cannot use https connections for Duet controllers'
         else:
             _printerURL = scheme + '://' + netlocation
+        '''
         return( _errCode, _errMsg, _printerURL )
 
     def loadUserParameters(self):
@@ -1492,7 +1531,7 @@ class App(QMainWindow):
             options = {}
             options['camera'] = []
             options['camera'].append( {
-                'video_src': 0,
+                'video_src': 0, 
                 'display_width': '640',
                 'display_height': '480'
             } )
@@ -1593,7 +1632,8 @@ class App(QMainWindow):
     def displayJogPanel(self):
         try:
             local_status = self.printer.getStatus()
-            if local_status == 'idle':
+            #if local_status == 'idle':
+            if local_status == 'ready':
                 jogPanel = CPDialog(parent=self,summary='Control printer movement using this panel.',title='Jog Control')
                 if jogPanel.exec_():
                     None
@@ -1627,7 +1667,8 @@ class App(QMainWindow):
         try:
             if self.printer.isIdle():
                 tempCoords = self.printer.getCoords()
-                self.printer.gCode('T-1')
+                #self.printer.gCode('T-1')
+                self.printer.gCode('TOOL_DROPOFF')
                 self.printer.gCode('G1 X' + str(tempCoords['X']) + ' Y' + str(tempCoords['Y']))
         except Exception as ce1: None # no printer connected usually.
         print()
@@ -1694,7 +1735,8 @@ class App(QMainWindow):
         self.statusBar.showMessage('Attempting to connect to: ' + self.printerURL )
         # Attempt connecting to the Duet controller
         try:
-            self.printer = DWA.DuetWebAPI(self.printerURL)
+            #self.printer = DWA.DuetWebAPI(self.printerURL)
+            self.printer = KA.KlipperAPI(self.printerURL)
             if not self.printer.printerType():
                 # connection failed for some reason
                 self.updateStatusbar('Device at '+self.printerURL+' either did not respond or is not a Duet V2 or V3 printer.')
@@ -1781,13 +1823,15 @@ class App(QMainWindow):
             if status == QMessageBox.Yes:
                 self.toolButtons[int(self.sender().text()[1:])].setChecked(False)
                 if len(self.cp_coords) > 0:
-                    self.printer.gCode('T-1')
+                    #self.printer.gCode('T-1')
+                    self.printer.gCode('TOOL_DROPOFF')
                     self.printer.gCode('G1 X' + str(self.cp_coords['X']))
                     self.printer.gCode('G1 Y' + str(self.cp_coords['Y']))
                     self.printer.gCode('G1 Z' + str(self.cp_coords['Z']))
                 else:
                     tempCoords = self.printer.getCoords()
-                    self.printer.gCode('T-1')
+                    #self.printer.gCode('T-1')
+                    self.printer.gCode('TOOL_DROPOFF')
                     self.printer.gCode('G1 X' + str(tempCoords['X']))
                     self.printer.gCode('G1 Y' + str(tempCoords['Y']))
                     self.printer.gCode('G1 Z' + str(tempCoords['Z']))
@@ -1810,14 +1854,16 @@ class App(QMainWindow):
             if status == QMessageBox.Yes:
                 # return carriage to controlled point position
                 if len(self.cp_coords) > 0:
-                    self.printer.gCode('T-1')
+                    #self.printer.gCode('T-1')
+                    self.printer.gCode('TOOL_DROPOFF')
                     self.printer.gCode(sender.text())
                     self.printer.gCode('G1 X' + str(self.cp_coords['X']))
                     self.printer.gCode('G1 Y' + str(self.cp_coords['Y']))
                     self.printer.gCode('G1 Z' + str(self.cp_coords['Z']))
                 else:
                     tempCoords = self.printer.getCoords()
-                    self.printer.gCode('T-1')
+                    #self.printer.gCode('T-1')
+                    self.printer.gCode('TOOL_DROPOFF')
                     self.printer.gCode(self.sender().text())
                     self.printer.gCode('G1 X' + str(tempCoords['X']))
                     self.printer.gCode('G1 Y' + str(tempCoords['Y']))
@@ -1882,8 +1928,10 @@ class App(QMainWindow):
         self.calibration_button.setDisabled(True)
 
         if len(self.cp_coords) > 0:
-            self.printer.gCode('T-1')
-            self.printer.gCode('G90 G1 X'+ str(self.cp_coords['X']) + ' Y' + str(self.cp_coords['Y']) + ' Z' + str(self.cp_coords['Z']) )
+            #self.printer.gCode('T-1')
+            self.printer.gCode('TOOL_DROPOFF')
+            #self.printer.gCode('G90 G1 X'+ str(self.cp_coords['X']) + ' Y' + str(self.cp_coords['Y']) + ' Z' + str(self.cp_coords['Z']) )
+            self.printer.gCodeBatch(['G90','G1 X'+ str(self.cp_coords['X']) + ' Y' + str(self.cp_coords['Y']) + ' Z' + str(self.cp_coords['Z'])])
         dlg = CPDialog(parent=self)
         if dlg.exec_():
             self.cp_coords = self.printer.getCoords()
@@ -2206,7 +2254,8 @@ class App(QMainWindow):
         _ret_error = self.printer.gCode('M400')
         if self.printer.isIdle():
             tempCoords = self.printer.getCoords()
-            _ret_error += self.printer.gCode('T-1')
+            #_ret_error += self.printer.gCode('T-1')
+            _ret_error += self.printer.gCode('TOOL_DROPOFF')
             # return carriage to controlled point position
             if len(self.cp_coords) > 0:
                 _ret_error += self.printer.gCode('G1 X' + str(self.cp_coords['X']))
