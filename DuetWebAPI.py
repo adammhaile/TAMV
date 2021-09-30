@@ -77,7 +77,7 @@ class DuetWebAPI:
                     sessionURL = (f'{self._base_url}'+'/rr_connect?password=reprap')
                     r = self.requests.get(sessionURL,timeout=8)
                     if not r.ok:
-                        print('Error in getStatus session: ', r)
+                        print('Error Dx00: getStatus session: ', r)
                     buffer_size = 0
                     while buffer_size < 150:
                         bufferURL = (f'{self._base_url}'+'/rr_gcode')
@@ -116,7 +116,7 @@ class DuetWebAPI:
                     ret[ ja[i]['letter'] ] = ja[i]['userPosition']
                 return(ret)
         except Exception as e1:
-            print('Error in getStatus: ',e1 )
+            print('Error Dx01: getStatus: ',e1 )
         
     def getCoordsAbs(self):
         if (self.pt == 2):
@@ -220,7 +220,7 @@ class DuetWebAPI:
                     sessionURL = (f'{self._base_url}'+'/rr_connect?password=reprap')
                     r = self.requests.get(sessionURL,timeout=8)
                     if not r.ok:
-                        print('Error in getStatus session: ', r)
+                        print('Error Dx02: getStatus session: ', r)
                     buffer_size = 0
                     while buffer_size < 150:
                         bufferURL = (f'{self._base_url}'+'/rr_gcode')
@@ -245,7 +245,7 @@ class DuetWebAPI:
                     endsessionURL = (f'{self._base_url}'+'/rr_disconnect')
                     r2 = self.requests.get(endsessionURL,timeout=8)
                     if not r2.ok:
-                        print('Error in getStatus end session: ', r2)
+                        print('Error Dx03: getStatus end session: ', r2)
                 if ('I' in s): return('idle')
                 if ('P' in s): return('processing')
                 if ('S' in s): return('paused')
@@ -260,7 +260,7 @@ class DuetWebAPI:
                 _status = str(j['state']['status'])
                 return( _status.lower() )
         except Exception as e1:
-            print('Error in getStatus: ',e1 )
+            print('Error Dx04: getStatus: ',e1 )
             return 'Error'
 
     def gCode(self,command):
@@ -350,7 +350,7 @@ class DuetWebAPI:
             URL=(f'{self._base_url}'+'/rr_status?type=2')
             r = self.requests.get(URL,timeout=8)
             j = self.json.loads(r.text)
-            return('Error: getTemperatures not implemented (yet) for RRF V2 printers.')
+            return('Error Dx05: getTemperatures not implemented (yet) for RRF V2 printers.')
         if (self.pt == 3):
             URL=(f'{self._base_url}'+'/machine/status')
             r  = self.requests.get(URL,timeout=8)
@@ -379,7 +379,7 @@ class DuetWebAPI:
                     sessionURL = (f'{self._base_url}'+'/rr_connect?password=reprap')
                     r = self.requests.get(sessionURL,timeout=8)
                     if not r.ok:
-                        print('Error in getStatus session: ', r)
+                        print('Error Dx06: in getStatus session: ', r)
                     buffer_size = 0
                     while buffer_size < 150:
                         bufferURL = (f'{self._base_url}'+'/rr_gcode')
@@ -411,7 +411,7 @@ class DuetWebAPI:
                 ret=j['state']['currentTool']
                 return(ret)
         except Exception as e1:
-            print('Error in getStatus: ',e1 )
+            print('Error Dx07: in getStatus: ',e1 )
 
     def getHeaters(self):
         import time
@@ -422,7 +422,7 @@ class DuetWebAPI:
                     sessionURL = (f'{self._base_url}'+'/rr_connect?password=reprap')
                     r = self.requests.get(sessionURL,timeout=8)
                     if not r.ok:
-                        print('Error in getStatus session: ', r)
+                        print('Error Dx08: in getStatus session: ', r)
                     buffer_size = 0
                     while buffer_size < 150:
                         bufferURL = (f'{self._base_url}'+'/rr_gcode')
@@ -454,7 +454,7 @@ class DuetWebAPI:
                 ret=j['heat']['heaters']
                 return(ret)
         except Exception as e1:
-            print('Error in getStatus: ',e1 )
+            print('Error Dx09: in getStatus: ',e1 )
 
     def isIdle(self):
         try:
@@ -464,7 +464,7 @@ class DuetWebAPI:
                     sessionURL = (f'{self._base_url}'+'/rr_connect?password=reprap')
                     r = self.requests.get(sessionURL,timeout=8)
                     if not r.ok:
-                        print('Error in getStatus session: ', r)
+                        print('Error Dx10: in getStatus session: ', r)
                     buffer_size = 0
                     while buffer_size < 150:
                         bufferURL = (f'{self._base_url}'+'/rr_gcode')
@@ -490,7 +490,7 @@ class DuetWebAPI:
                     endsessionURL = (f'{self._base_url}'+'/rr_disconnect')
                     r2 = self.requests.get(endsessionURL,timeout=8)
                     if not r2.ok:
-                        print('Error in getStatus end session: ', r2)
+                        print('Error Dx11: in getStatus end session: ', r2)
                         return False
                 if ('I' in s):
                     return True
@@ -509,7 +509,7 @@ class DuetWebAPI:
                 else:
                     return False
         except Exception as e1:
-            print('Error in isIdle(): ',e1 )
+            print('Error Dx12: in isIdle(): ',e1 )
             return False
 ####
 # The following methods provide services built on the atomics above. 

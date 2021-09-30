@@ -673,7 +673,8 @@ class CalibrateNozzles(QThread):
                         self.detection_on = False
                         self.display_crosshair = False
                         self._running = False
-                        self.detection_error.emit(str(mn1))
+                        self.detection_error.emit('Error 0x00: ' + str(mn1))
+                        print('Error 0x00: ' + str(mn1))
                         self.cap.release()
                 else:
                     # don't run alignment - fetch frames and detect only
@@ -700,7 +701,8 @@ class CalibrateNozzles(QThread):
                             app.processEvents()
                     except Exception as mn1:
                         self._running = False
-                        self.detection_error.emit(str(mn1))
+                        self.detection_error.emit('Error 0x00a: ' + str(mn1))
+                        print('Error 0x00a: ' + str(mn1))
                         self.cap.release()
             elif self.align_endstop:
                 print('Starting auto-CP detection..')
@@ -755,8 +757,8 @@ class CalibrateNozzles(QThread):
                             continue
                         app.processEvents()
                     except Exception as mn2:
-                        self.status_update( 'Error: ' + str(mn2) )
-                        print('Error: ' + str(mn2))
+                        self.status_update( 'Error 0x01: ' + str(mn2) )
+                        print( 'Error 0x01: ' + str(mn2))
                         self.cap.release()
                         self.detection_on = False
                         self._running = False
@@ -797,6 +799,7 @@ class CalibrateNozzles(QThread):
                     toolCoordinates = self.parent().printer.getCoords()
                 except Exception as c1:
                     toolCoordinates = None
+                    print(  'Warning 0x02: ' + str(c1) )
             # capture first clean frame for display
             cleanFrame = self.frame
             # apply nozzle detection algorithm
@@ -1748,8 +1751,8 @@ class App(QMainWindow):
             if self.video_thread.isRunning():
                 self.video_thread.stop()
         except Exception as vs2:
-            self.updateStatusbar('ERROR: cannot stop video')
-            print('ERROR: cannot stop video')
+            self.updateStatusbar( 'Error 0x03: cannot stop video.')
+            print('Error 0x03: cannot stop video.')
             print(vs2)
 
     def closeEvent(self, event):
@@ -1854,7 +1857,7 @@ class App(QMainWindow):
                     self.toolButtons.append(toolButton)
         except Exception as conn1:
             self.updateStatusbar('Cannot connect to: ' + self.printerURL )
-            print('Duet Connection exception: ', conn1)
+            print( 'Error 0x04: ' + 'Duet Connection exception: ', conn1)
             self.resetConnectInterface()
             return
         # Get active tool
@@ -2214,7 +2217,7 @@ class App(QMainWindow):
                 with open('output.json','w') as outputfile:
                     json.dump(self.calibrationResults, outputfile)
             except Exception as e1:
-                print('Error exporting data:')
+                print('Error 0x05: failed in exporting data:')
                 print(e1)
                 self.updateStatusbar('Error exporting data, please check terminal for details.')
 
