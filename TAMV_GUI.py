@@ -1752,8 +1752,8 @@ class App(QMainWindow):
             #get tool offsets
             self.tool_offsets = self.printer.getG10ToolOffset(_active)
             # calculate X and Y coordinates
-            final_x = np.around( (self.parent().cp_coords['X'] + self.tool_offsets['X']) - curr_x, 3 )
-            final_y = np.around( (self.parent().cp_coords['Y'] + self.tool_offsets['Y']) - curr_y, 3 )
+            final_x = np.around( (self.cp_coords['X'] + self.tool_offsets['X']) - curr_x, 3 )
+            final_y = np.around( (self.cp_coords['Y'] + self.tool_offsets['Y']) - curr_y, 3 )
             print('G10 P' + str(_active) + ' X' + str(final_x) + ' Y' + str(final_y))
         except Exception as e2:
             self.statusBar.showMessage('Error in manual capture.')
