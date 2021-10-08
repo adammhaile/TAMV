@@ -793,13 +793,13 @@ class CalibrateNozzles(QThread):
                 self.cap.set(cv2.CAP_PROP_BUFFERSIZE,1)
                 #self.cap.set(cv2.CAP_PROP_FPS,25)
                 continue
-            if self.alignment:
-                try:
-                    # capture tool location in machine space before processing
-                    toolCoordinates = self.parent().printer.getCoords()
-                except Exception as c1:
-                    toolCoordinates = None
-                    print(  'Warning 0x02: ' + str(c1) )
+            #if self.alignment:
+            try:
+                # capture tool location in machine space before processing
+                toolCoordinates = self.parent().printer.getCoords()
+            except Exception as c1:
+                toolCoordinates = None
+                print(  'Warning 0x02: ' + str(c1) )
             # capture first clean frame for display
             cleanFrame = self.frame
             # apply nozzle detection algorithm
