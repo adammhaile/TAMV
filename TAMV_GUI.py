@@ -1731,7 +1731,7 @@ class App(QMainWindow):
             None
 
     def displayJogPanel(self):
-        self.crosshair = True
+        #self.crosshair = True
         try:
             local_status = self.printer.getStatus()
             if local_status == 'idle':
@@ -1743,6 +1743,7 @@ class App(QMainWindow):
 
     # Manual offset capture
     def manualOffset(self):
+        self.crosshair_alignment = True
         try:
             #print('Capturing coordinates')
             currentPosition = self.printer.getCoords()
@@ -1764,7 +1765,8 @@ class App(QMainWindow):
         except Exception as e2:
             self.statusBar.showMessage('Error in manual capture.')
             print('Error in manual capture: ' + str(e2))
-    
+        self.crosshair_alignment = False
+
     def startVideo(self):
         # create the video capture thread
         self.video_thread = CalibrateNozzles(parent=self,numTools=0, cycles=1,minArea=600, align=False)
@@ -2516,6 +2518,36 @@ class App(QMainWindow):
                 overlay.copy(), 
                 center, 
                 5, 
+                (0,0,255), 
+                2
+            )
+            for i in range(0,8):
+                overlay = cv2.circle( 
+                overlay.copy(), 
+                center, 
+                25*i, 
+                (0,0,0), 
+                1
+            )
+            overlay = cv2.line(overlay, (center[0],center[1]-int( camera_width/3 )), (center[0],center[1]+int( camera_width/3 )), (128, 128, 128), 1)
+            overlay = cv2.line(overlay, (center[0]-int( camera_width/3 ),center[1]), (center[0]+int( camera_width/3 ),center[1]), (128, 128, 128), 1)
+            cv_img = cv2.addWeighted(overlay, beta, cv_img, alpha, 0)
+        elif self.crosshair_alignment:
+            # Draw alignment circle on image
+            alpha = 0.5
+            beta = 1-alpha
+            center = ( int(camera_width/2), int(camera_height/2) )
+            overlay = cv2.circle( 
+                cv_img.copy(), 
+                center, 
+                6, 
+                (128,128,128), 
+                int( camera_width/1.75 )
+            )
+            overlay = cv2.circle( 
+                overlay.copy(), 
+                center, 
+                8, 
                 (0,0,255), 
                 2
             )
