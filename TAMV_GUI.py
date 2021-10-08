@@ -1739,6 +1739,7 @@ class App(QMainWindow):
                 if jogPanel.exec_():
                     None
         except Exception as e1: self.statusBar.showMessage('Printer is not available or is busy. ')
+        self.crosshair = False
 
     # Manual offset capture
     def manualOffset(self):
