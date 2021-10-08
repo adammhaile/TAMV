@@ -1744,20 +1744,20 @@ class App(QMainWindow):
     # Manual offset capture
     def manualOffset(self):
         try:
-            print('Capturing coordinates')
+            #print('Capturing coordinates')
             currentPosition = self.printer.getCoords()
             curr_x = currentPosition['X']
             curr_y = currentPosition['Y']
             # Get active tool
             _active = int(self.printer.getCurrentTool())
-            print('Getting active tool.')
+            #print('Getting active tool.')
             #get tool offsets
             self.tool_offsets = self.printer.getG10ToolOffset(_active)
-            print('Fetching tool offsets')
+            #print('Fetching tool offsets')
             # calculate X and Y coordinates
             final_x = np.around( (self.cp_coords['X'] + self.tool_offsets['X']) - curr_x, 3 )
             final_y = np.around( (self.cp_coords['Y'] + self.tool_offsets['Y']) - curr_y, 3 )
-            print('Calculating new offset values')
+            #print('Calculating new offset values')
             offsetString  = 'G10 P' + str(_active) + ' X' + str(final_x) + ' Y' + str(final_y)
             print(offsetString)
             self.printer.gCode(offsetString)
