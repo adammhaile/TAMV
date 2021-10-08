@@ -1905,6 +1905,7 @@ class App(QMainWindow):
         self.cp_label.setStyleSheet(style_red)
 
     def callTool(self):
+        self.manual_button.setDisabled(False)
         # handle scenario where machine is busy and user tries to select a tool.
         if not self.printer.isIdle():
             self.updateStatusbar('Machine is not idle, cannot select tool.')
@@ -2387,6 +2388,7 @@ class App(QMainWindow):
         self.cp_button.setText('Set Controlled Point..')
         self.jogpanel_button.setDisabled(True)
         self.offsets_box.setVisible(False)
+        self.manual_button.setDisabled(True)
         self.connection_status.setText('Disconnected.')
         self.connection_status.setStyleSheet(style_red)
         self.cp_label.setText('<b>CP:</b> <i>undef</i>')
