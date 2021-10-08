@@ -1744,10 +1744,18 @@ class App(QMainWindow):
     # Manual offset capture
     def manualOffset(self):
         try:
-            currentPosition = self.printer.getCoords()
+            tool_coordinates = self.printer.getCoords()
             curr_x = currentPosition['X']
             curr_y = currentPosition['Y']
             self.statusBar.showMessage('Tool captured at (' + str(curr_x) + ', ' + str(curr_y) + ')')
+            # Get active tool
+            _active = int(self.printer.getCurrentTool())
+            #get tool offsets
+            self.tool_offsets = self.parent().printer.getG10ToolOffset(tool)
+            # calculate X and Y coordinates
+            final_x = np.around( (self.cp_coordinates['X'] + self.tool_offsets['X']) - self.tool_coordinates['X'], 3 )
+            final_y = np.around( (self.cp_coordinates['Y'] + self.tool_offsets['Y']) - self.tool_coordinates['Y'], 3 )
+            print('G10 P' + str(_active) + ' X' + str(final_x) + ' Y' + str(final_y))
         except Exception as e2:
             self.statusBar.showMessage('Error in manual capture.')
             print('Error in manual capture: ' + str(e2))
