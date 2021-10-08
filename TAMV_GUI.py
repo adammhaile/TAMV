@@ -1754,7 +1754,9 @@ class App(QMainWindow):
             # calculate X and Y coordinates
             final_x = np.around( (self.cp_coords['X'] + self.tool_offsets['X']) - curr_x, 3 )
             final_y = np.around( (self.cp_coords['Y'] + self.tool_offsets['Y']) - curr_y, 3 )
-            print('G10 P' + str(_active) + ' X' + str(final_x) + ' Y' + str(final_y))
+            offsetString  = 'G10 P' + str(_active) + ' X' + str(final_x) + ' Y' + str(final_y)
+            print(offsetString)
+            self.printer.gCode(offsetString)
         except Exception as e2:
             self.statusBar.showMessage('Error in manual capture.')
             print('Error in manual capture: ' + str(e2))
