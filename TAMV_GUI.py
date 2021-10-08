@@ -1731,6 +1731,7 @@ class App(QMainWindow):
             None
 
     def displayJogPanel(self):
+        self.crosshair = True
         try:
             local_status = self.printer.getStatus()
             if local_status == 'idle':
@@ -1738,6 +1739,8 @@ class App(QMainWindow):
                 if jogPanel.exec_():
                     None
         except Exception as e1: self.statusBar.showMessage('Printer is not available or is busy. ')
+
+    # Manual offset capture
     def manualOffset(self):
         try:
             currentPosition = self.printer.getCoords()
