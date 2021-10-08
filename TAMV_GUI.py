@@ -1741,6 +1741,9 @@ class App(QMainWindow):
     def manualOffset(self):
         try:
             currentPosition = self.printer.getCoords()
+            curr_x = currentPosition['X']
+            curr_y = currentPosition['Y']
+            self.statusBar.showMessage('Tool captured at (' + str(curr_x) + ', ' + str(curr_y) + ')')
         except Exception as e2:
             self.statusBar.showMessage('Error in manual capture.')
             print('Error in manual capture: ' + str(e2))
