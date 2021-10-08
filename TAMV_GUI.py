@@ -1498,6 +1498,12 @@ class App(QMainWindow):
         self.offsets_box.setLayout(vbox)
         vbox.addWidget(self.offsets_table)
         self.offsets_box.setVisible(False)
+        # Manual alignment button
+        self.manual_button = QPushButton('Manual offset')
+        self.manual_button.setToolTip('After jogging tool to the correct position in the window, capture and calculate offset.')
+        self.manual_button.clicked.connect(self.manualOffset)
+        self.manual_button.setDisabled(True)
+        self.manual_button.setFixedWidth(170)
         # Tool buttons table
         self.toolBoxLayout = QHBoxLayout()
         self.toolBoxLayout.setSpacing(1)
@@ -1540,6 +1546,8 @@ class App(QMainWindow):
         grid.addWidget(self.image_label,3,1,4,6)
         grid.addWidget(self.jogpanel_button,3,7,1,1)
         grid.addWidget(self.offsets_box,4,7,1,1)
+        #HBHBHBHB
+        grid.addWidget(self.manual_button,5,7,1,1)
         if self.small_display:
             grid.addWidget(self.exit_button,5,7,1,1)
         grid.addWidget(self.debug_button,6,7,1,1)
@@ -1730,7 +1738,13 @@ class App(QMainWindow):
                 if jogPanel.exec_():
                     None
         except Exception as e1: self.statusBar.showMessage('Printer is not available or is busy. ')
-
+    def manualOffset(self):
+        try:
+            currentPosition = self.printer.getCoords()
+        except Exception as e2:
+            self.statusBar.showMessage('Error in manual capture.')
+            print('Error in manual capture: ' + str(e2))
+    
     def startVideo(self):
         # create the video capture thread
         self.video_thread = CalibrateNozzles(parent=self,numTools=0, cycles=1,minArea=600, align=False)
