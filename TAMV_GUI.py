@@ -1569,6 +1569,7 @@ class App(QMainWindow):
         self.startVideo()
         # flag to draw circle
         self.crosshair = False
+        self.crosshair_alignment = False
 
     def calibrate_CP(self):
         self.video_thread.align_endstop = True
