@@ -726,10 +726,10 @@ class CalibrateNozzles(QThread):
                     self.calibrateTool(tool='endstop', rep=1)
                     # process GUI events
                     app.processEvents()
-                    # Capture new position as CP
-                    self.parent().cp_coords = self.parent().printer.getCoords()
-                    self.parent().cp_string = '(' + str(self.parent().cp_coords['X']) + ', ' + str(self.parent().cp_coords['Y']) + ')'
-                    self.parent().readyToCalibrate()
+                    #HBHBHBHBHBHB Capture new position as CP
+                    #self.parent().cp_coords = self.parent().printer.getCoords()
+                    #self.parent().cp_string = '(' + str(self.parent().cp_coords['X']) + ', ' + str(self.parent().cp_coords['Y']) + ')'
+                    #self.parent().readyToCalibrate()
                     # signal end of execution
                     self._running = False
                     self.align_endstop = False
@@ -1578,6 +1578,12 @@ class App(QMainWindow):
 
     def calibrate_CP(self):
         self.video_thread.align_endstop = True
+        while self.video_thread.align_endstop:
+            None
+        # Capture new position as CP
+        self.cp_coords = self.printer.getCoords()
+        self.cp_string = '(' + str(self.cp_coords['X']) + ', ' + str(self.cp_coords['Y']) + ')'
+        self.readyToCalibrate()
 
     def toggle_detect(self):
         self.video_thread.display_crosshair = not self.video_thread.display_crosshair
