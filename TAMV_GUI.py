@@ -677,7 +677,7 @@ class CalibrateNozzles(QThread):
                         self.display_crosshair = False
                         self._running = False
                         self.detection_error.emit('Error 0x00: ' + str(mn1))
-                        print('Error 0x00: ' + str(mn1))
+                        logger.error('Error 0x00: ' + str(mn1))
                         self.cap.release()
                 else:
                     # don't run alignment - fetch frames and detect only
@@ -705,10 +705,10 @@ class CalibrateNozzles(QThread):
                     except Exception as mn1:
                         self._running = False
                         self.detection_error.emit('Error 0x00a: ' + str(mn1))
-                        print('Error 0x00a: ' + str(mn1))
+                        logger.error('Detection error (non-alignment cycle): ' + str(mn1))
                         self.cap.release()
             elif self.align_endstop:
-                print('Starting auto-CP detection..')
+                logger.debug('Starting auto-CP detection..')
                 self.status_update.emit('Starting auto-CP detection..')
                 self._running = True
                 while self._running:
@@ -738,7 +738,7 @@ class CalibrateNozzles(QThread):
                 self.parent().printer.gCode('G1 Y' + str(self.parent().cp_coords['Y']))
                 self.parent().printer.gCode('G1 Z' + str(self.parent().cp_coords['Z']))
                 self._running = False
-                print('CP auto-calibrated.')
+                logger.info('Controlled point has been automatically calibrated.')
             else:
                 while not self.detection_on and not self.align_endstop:
                     try:
@@ -761,7 +761,7 @@ class CalibrateNozzles(QThread):
                         app.processEvents()
                     except Exception as mn2:
                         self.status_update( 'Error 0x01: ' + str(mn2) )
-                        print( 'Error 0x01: ' + str(mn2))
+                        logger.error( 'Detection unhandled exception: ' + str(mn2))
                         self.cap.release()
                         self.detection_on = False
                         self._running = False
@@ -802,7 +802,7 @@ class CalibrateNozzles(QThread):
                 toolCoordinates = self.parent().printer.getCoords()
             except Exception as c1:
                 toolCoordinates = None
-                print(  'Warning 0x02: ' + str(c1) )
+                logger.warning( 'Tool coordinates cannot be determined:' + str(c1) )
             # capture first clean frame for display
             cleanFrame = self.frame
             # apply nozzle detection algorithm
@@ -1050,8 +1050,8 @@ class CalibrateNozzles(QThread):
                     calibration_time = np.around(time.time() - self.startTime,1)
                     self.parent().debugString += 'Camera calibration completed in ' + str(calibration_time) + ' seconds.\n'
                     self.parent().debugString += 'Millimeters per pixel: ' + str(self.mpp) + '\n\n'
-                    print('Millimeters per pixel: ' + str(self.mpp))
-                    print('Camera calibration completed in ' + str(calibration_time) + ' seconds.')
+                    logger.info('Millimeters per pixel: ' + str(self.mpp))
+                    logger.info('Camera calibration completed in ' + str(calibration_time) + ' seconds.')
                     # Update GUI thread with current status and percentage complete
                     self.message_update.emit('Calibrating rotation.. (100%) - MPP = ' + str(self.mpp))
                     if str(tool) not in "endstop":
@@ -1128,7 +1128,7 @@ class CalibrateNozzles(QThread):
                             _return['time'] = np.around(time.time() - self.startTime,1)
                             self.message_update.emit('Nozzle calibrated: offset coordinates X' + str(_return['X']) + ' Y' + str(_return['Y']) )
                             self.parent().debugString += 'T' + str(tool) + ', cycle ' + str(rep+1) + ' completed in ' + str(_return['time']) + ' seconds.\n'
-                            print('T' + str(tool) + ', cycle ' + str(rep+1) + ' completed in ' + str(_return['time']) + ' seconds.')
+                            logger.info('T' + str(tool) + ', cycle ' + str(rep+1) + ' completed in ' + str(_return['time']) + ' seconds.')
                             self.message_update.emit('T' + str(tool) + ', cycle ' + str(rep+1) + ' completed in ' + str(_return['time']) + ' seconds.')
                         else:
                             self.message_update.emit('CP auto-calibrated.')
@@ -1304,7 +1304,7 @@ class App(QMainWindow):
         # 800x600 display - fullscreen app
         if int(screen.width()) >= 800 and int(screen.height()) >= 550 and int(screen.height() < 600):
             self.small_display = True
-            print('800x600 desktop detected')
+            logger.info('800x600 desktop detected')
             display_width = 512
             display_height = 384
             self.setWindowFlag(Qt.FramelessWindowHint)
@@ -1314,7 +1314,7 @@ class App(QMainWindow):
         # 848x480 display - fullscreen app
         elif int(screen.width()) >= 800 and int(screen.height()) < 550:
             self.small_display = True
-            print('848x480 desktop detected')
+            logger.info('848x480 desktop detected')
             display_width = 448
             display_height = 336
             self.setWindowFlag(Qt.FramelessWindowHint)
@@ -1628,8 +1628,8 @@ class App(QMainWindow):
             ( _errCode, _errMsg, self.printerURL ) = self.cleanPrinterURL(tempURL)
             if _errCode > 0:
                 # invalid input
-                print('Invalid printer URL detected in settings.json!')
-                print('Defaulting to \"http://localhost\"...')
+                logger.error('Invalid printer URL detected in settings.json')
+                logger.info('Defaulting to \"http://localhost\"...')
                 self.printerURL = 'http://localhost'
         except FileNotFoundError:
             # create parameter file with standard parameters
@@ -1652,8 +1652,7 @@ class App(QMainWindow):
                 with open('settings.json','w') as outputfile:
                     json.dump(options, outputfile)
             except Exception as e1:
-                print('Error writing user settings file.')
-                print(e1)
+                logger.error( 'Error reading user settings file.' + str(e1) )
 
     def saveUserParameters(self, cameraSrc=-2):
         global camera_width, camera_height, video_src
@@ -1676,8 +1675,7 @@ class App(QMainWindow):
             with open('settings.json','w') as outputfile:
                 json.dump(options, outputfile)
         except Exception as e1:
-            print('Error saving user settings file.')
-            print(e1)
+            logger.error( 'Error saving user settings file.' + str(e1) )
         if int(video_src) != cameraSrc:
             self.video_thread.changeVideoSrc(newSrc=cameraSrc)
         self.updateStatusbar('Current profile saved to settings.json')
@@ -1750,26 +1748,24 @@ class App(QMainWindow):
     def manualOffset(self):
         self.crosshair_alignment = True
         try:
-            #print('Capturing coordinates')
+            logger.debug('Manual offset calculation starting..')
             currentPosition = self.printer.getCoords()
             curr_x = currentPosition['X']
             curr_y = currentPosition['Y']
             # Get active tool
             _active = int(self.printer.getCurrentTool())
-            #print('Getting active tool.')
             #get tool offsets
             self.tool_offsets = self.printer.getG10ToolOffset(_active)
-            #print('Fetching tool offsets')
             # calculate X and Y coordinates
             final_x = np.around( (self.cp_coords['X'] + self.tool_offsets['X']) - curr_x, 3 )
             final_y = np.around( (self.cp_coords['Y'] + self.tool_offsets['Y']) - curr_y, 3 )
-            #print('Calculating new offset values')
             offsetString  = 'G10 P' + str(_active) + ' X' + str(final_x) + ' Y' + str(final_y)
-            print(offsetString)
+            logger.info(offsetString)
             self.printer.gCode(offsetString)
         except Exception as e2:
             self.statusBar.showMessage('Error in manual capture.')
-            print('Error in manual capture: ' + str(e2))
+            logger.error('Error in manual capture: ' + str(e2))
+        logger.debug('Manual offset calculation ending..')
         self.crosshair_alignment = False
 
     def startVideo(self):
@@ -1793,8 +1789,7 @@ class App(QMainWindow):
                 self.video_thread.stop()
         except Exception as vs2:
             self.updateStatusbar( 'Error 0x03: cannot stop video.')
-            print('Error 0x03: cannot stop video.')
-            print(vs2)
+            logger.error('Cannot stop video capture: ' + str(vs2) )
 
     def closeEvent(self, event):
         try:
@@ -1898,7 +1893,7 @@ class App(QMainWindow):
                     self.toolButtons.append(toolButton)
         except Exception as conn1:
             self.updateStatusbar('Cannot connect to: ' + self.printerURL )
-            print( 'Error 0x04: ' + 'Duet Connection exception: ', conn1)
+            logger.error( 'Duet connection exception: ' + str(conn1))
             self.resetConnectInterface()
             return
         # Get active tool
@@ -2131,7 +2126,7 @@ class App(QMainWindow):
                 self.printer.gCode(calibrationCode)
                 self.printer.gCode('M500 P10') # because of Rene.
             self.statusBar.showMessage('Offsets applied and stored using M500.')
-            print('Offsets applied and stored using M500.')
+            logger.info('Offsets applied to machine and stored using M500.')
         else:
             self.statusBar.showMessage('Temporary offsets applied. You must manually save these offsets.')
         # Clean up threads and detection
@@ -2256,11 +2251,11 @@ class App(QMainWindow):
         if export:
             # export JSON data to file
             try:
+                self.calibrationResults.append({ "printer":self.printerURL, "datetime":datetime.now() })
                 with open('output.json','w') as outputfile:
                     json.dump(self.calibrationResults, outputfile)
             except Exception as e1:
-                print('Error 0x05: failed in exporting data:')
-                print(e1)
+                logger.error('Failed to export alignment data:' + str(e1) )
                 self.updateStatusbar('Error exporting data, please check terminal for details.')
 
     def stats(self):
@@ -2484,16 +2479,14 @@ class App(QMainWindow):
             self.video_thread.toggleXray()
         except Exception as e1:
             self.updateStatusbar('Detection thread not running.')
-            print( 'Detection thread error in XRAY: ')
-            print(e1)
+            logger.error( 'Detection thread error in XRAY: ' +  str(e1) )
 
     def toggle_loose(self):
         try:
             self.video_thread.toggleLoose()
         except Exception as e1:
             self.updateStatusbar('Detection thread not running.')
-            print( 'Detection thread error in LOOSE: ')
-            print(e1)
+            logger.error( 'Detection thread error in LOOSE: ' + str(e1) )
 
     @pyqtSlot(str)
     def updateStatusbar(self, statusCode ):
@@ -2596,10 +2589,10 @@ if __name__=='__main__':
     ch = logging.StreamHandler()
     ch.setLevel(logging.WARNING)
     # create a formatter and add it to the handlers
-    dateformat = '%H:%M:%S'
-    file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(funcName)s (%(lineno)d) - %(message)s',datefmt=dateformat)
+    file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(funcName)s (%(lineno)d) - %(message)s')
     #console_formatter = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(name)s - %(funcName)s (%(lineno)d) - %(message)s',datefmt=dateformat)
-    console_formatter = logging.Formatter(fmt='%(name)-15s: %(levelname)-9s %(funcName)-10s (%(lineno)d): %(message)s')
+    dateformat = '%H:%M:%S'
+    console_formatter = logging.Formatter(fmt='%(name)-15s: %(levelname)-9s %(funcName)-10s (%(lineno)d): %(message)s',datefmt=dateformat )
     fh.setFormatter(file_formatter)
     ch.setFormatter(console_formatter)
     # add the handlers to the logger
