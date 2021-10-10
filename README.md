@@ -135,6 +135,7 @@ _[back to top](#table-of-contents)_
  Here's the code to do just that:
  
  ```sudo apt update```
+ 
  ```sudo apt install libopencv-dev python3-opencv```
  
  This install will take a few minutes to complete at most, and is much faster than compiling opencv from source!
