@@ -7,6 +7,7 @@
 - [What do I need to run TAMV?](#what-do-i-need-to-run-tamv)
 - [What do I need to run ZTATP?](#what-do-i-need-to-run-ztatp)
 - [How do I install OpenCV on my Raspberry Pi?](#how-do-i-install-opencv-on-my-raspberry-pi)
+- [Ubuntu host installation notes](#ubuntu-host-installation-notes)
 - [How do I run these packages?](#how-do-i-run-these-packages)
   * [TAMV_GUI](#tamv_gui)
   * [ZTATP](#ztatp)
@@ -127,6 +128,12 @@ _[back to top](#table-of-contents)_
 4. Wait an hour or two for everything to be installed
 
 _[back to top](#table-of-contents)_
+# Ubuntu host installation notes
+## Installing openCV on Ubuntu 20.04 and above
+Most Ubuntu releases already have a precompiled openCV library that can be installed using apt.
+## Pop-up windows cannot be moved around the screen?
+Within the GNOME desktop manager, the default behavior is that modal pop-up windows are centered on the parent window and are completely blocking. To override this default behavior, simply open a terminal window, and type the following command: ```gsettings set org.gnome.mutter attach-modal-dialogs false```
+ _[back to top](#table-of-contents)_
 # How do I run these packages?
 ## TAMV_GUI
 1. Connect your microscope/webcam to a USB port (preferably only connect 1 when starting it for the first time)
