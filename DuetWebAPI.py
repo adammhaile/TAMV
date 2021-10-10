@@ -14,21 +14,26 @@
 #
 # Requires Python3
 
+# create logger
+import logging
+logger = logging.getLogger('TAMV.DuetWebAPI')
+
 class DuetWebAPI:
     import requests
     import json
     import sys
     import time
     import datetime
+
     pt = 0
     _base_url = ''
     _rrf2 = False
 
-
     def __init__(self,base_url):
+        logger.debug('Starting DuetWebAPI..')
         self._base_url = base_url
         try:
-            print('Connecting to', base_url, '..')
+            logger.info('Connecting to ' + base_url + '..')
             URL=(f'{self._base_url}'+'/rr_status?type=2')
             r = self.requests.get(URL,timeout=(2,60))
             replyURL = (f'{self._base_url}'+'/rr_reply')
@@ -40,12 +45,13 @@ class DuetWebAPI:
             try:
                 firmwareName = j['firmwareName']
                 firmwareVersion = j['firmwareVersion']
-                print('Duet Firmware:', firmwareName, '- V'+firmwareVersion)
                 if firmwareVersion[0] == "2":
                     self._rrf2 = True
             except Exception as e:
                 self._rrf2 = True
+                logger.warning('unknown board+RRF combo - defaulting to RRF2')
             self.pt = 2
+            logger.info('Connected to Duet Firmware: '+ firmwareName + '- V'+firmwareVersion)
             return
         except:
             try:
@@ -53,10 +59,13 @@ class DuetWebAPI:
                 r = self.requests.get(URL,timeout=(2,60))
                 j = self.json.loads(r.text)
                 _=j
+                firmwareName = j['boards'][0]['firmwareName']
+                firmwareVersion = j['boards'][0]['firmwareVersion']
                 self.pt = 3
+                logger.info('Connected to Duet Firmware: '+ firmwareName + '- V'+firmwareVersion)
                 return
             except:
-                print(self._base_url," does not appear to be a RRF2 or RRF3 printer", file=self.sys.stderr)
+                logger.error( self._base_url + " does not appear to be an RRF2 or RRF3 printer")
                 return 
 ####
 # The following methods are a more atomic, reading/writing basic data structures in the printer. 
@@ -77,7 +86,7 @@ class DuetWebAPI:
                     sessionURL = (f'{self._base_url}'+'/rr_connect?password=reprap')
                     r = self.requests.get(sessionURL,timeout=8)
                     if not r.ok:
-                        print('Error Dx00: getStatus session: ', r)
+                        logger.warning('Error parsing getStatus session: ' + r)
                     buffer_size = 0
                     while buffer_size < 150:
                         bufferURL = (f'{self._base_url}'+'/rr_gcode')
@@ -90,7 +99,7 @@ class DuetWebAPI:
                         replyURL = (f'{self._base_url}'+'/rr_reply')
                         reply = self.requests.get(replyURL,timeout=8)
                         if buffer_size < 150:
-                            print('Buffer low: ', buffer_size)
+                            logger.debug('Buffer low - adding 0.6s delay before next call: ' + str(buffer_size))
                             time.sleep(0.6)
                 while self.getStatus() not in "idle":
                     time.sleep(0.5)
@@ -116,7 +125,7 @@ class DuetWebAPI:
                     ret[ ja[i]['letter'] ] = ja[i]['userPosition']
                 return(ret)
         except Exception as e1:
-            print('Error Dx01: getStatus: ',e1 )
+            logger.error('Exception occurred in getCoords: ' + e1 )
         
     def getCoordsAbs(self):
         if (self.pt == 2):
@@ -168,6 +177,7 @@ class DuetWebAPI:
             to = jt[tool]['offsets']
             for i in range(0,len(to)):
                 ret[ ja[i]['letter'] ] = to[i]
+            logger.debug('Tool offset for T' + str(tool) +': ' + str(ret))
             return(ret)
         if (self.pt == 2):
             URL=(f'{self._base_url}'+'/rr_status?type=2')
@@ -179,8 +189,9 @@ class DuetWebAPI:
             to = jt[tool]['offsets']
             for i in range(0,len(to)):
                 ret[ ja[i] ] = to[i]
+            logger.debug('Tool offset for T' + str(tool) +': ' + str(ret))
             return(ret)
-
+        logger.warning('getG10ToolOffset entered unhandled exception state.')
         return({'X':0,'Y':0,'Z':0})      # Dummy for now              
 
     def getNumExtruders(self):
@@ -189,12 +200,14 @@ class DuetWebAPI:
             r = self.requests.get(URL,timeout=8)
             j = self.json.loads(r.text)
             jc=j['coords']['extr']
+            logger.debug('Number of extruders: ' + str(len(jc)))
             return(len(jc))
         if (self.pt == 3):
             URL=(f'{self._base_url}'+'/machine/status')
             r = self.requests.get(URL,timeout=8)
             j = self.json.loads(r.text)
             if 'result' in j: j = j['result']
+            logger.debug('Number of extruders: ' + str(len(j['move']['extruders'])))
             return(len(j['move']['extruders']))
 
     def getNumTools(self):
@@ -203,12 +216,14 @@ class DuetWebAPI:
             r = self.requests.get(URL,timeout=8)
             j = self.json.loads(r.text)
             jc=j['tools']
+            logger.debug('Number of tools: ' + str(len(jc)))
             return(len(jc))
         if (self.pt == 3):
             URL=(f'{self._base_url}'+'/machine/status')
             r = self.requests.get(URL,timeout=8)
             j = self.json.loads(r.text)
             if 'result' in j: j = j['result']
+            logger.debug('Number of tools: ' + str(len(j['tools'])))
             return(len(j['tools']))
 
     def getStatus(self):
@@ -220,7 +235,7 @@ class DuetWebAPI:
                     sessionURL = (f'{self._base_url}'+'/rr_connect?password=reprap')
                     r = self.requests.get(sessionURL,timeout=8)
                     if not r.ok:
-                        print('Error Dx02: getStatus session: ', r)
+                        logger.warning('Error in getStatus session: ' + str(r))
                     buffer_size = 0
                     while buffer_size < 150:
                         bufferURL = (f'{self._base_url}'+'/rr_gcode')
@@ -233,7 +248,7 @@ class DuetWebAPI:
                         replyURL = (f'{self._base_url}'+'/rr_reply')
                         reply = self.requests.get(replyURL,timeout=8)
                         if buffer_size < 150:
-                            print('Buffer low: ', buffer_size)
+                            logger.debug('Buffer low - adding 0.6s delay before next call: ' + str(buffer_size))
                             time.sleep(0.6)
                 URL=(f'{self._base_url}'+'/rr_status?type=2')
                 r = self.requests.get(URL,timeout=8)
@@ -245,7 +260,7 @@ class DuetWebAPI:
                     endsessionURL = (f'{self._base_url}'+'/rr_disconnect')
                     r2 = self.requests.get(endsessionURL,timeout=8)
                     if not r2.ok:
-                        print('Error Dx03: getStatus end session: ', r2)
+                        logger.error('getStatus ended session: ' + str(r2))
                 if ('I' in s): return('idle')
                 if ('P' in s): return('processing')
                 if ('S' in s): return('paused')
@@ -260,7 +275,7 @@ class DuetWebAPI:
                 _status = str(j['state']['status'])
                 return( _status.lower() )
         except Exception as e1:
-            print('Error Dx04: getStatus: ',e1 )
+            logger.error('Unhandled exception in getStatus: ' + str(e1))
             return 'Error'
 
     def gCode(self,command):
@@ -280,7 +295,7 @@ class DuetWebAPI:
                     except:
                         buffer_size = 149
                     if buffer_size < 150:
-                        print('Buffer low: ', buffer_size)
+                        logger.debug('Buffer low - adding 0.6s delay before next call: ' + str(buffer_size))
                         time.sleep(0.6)
             URL=(f'{self._base_url}'+'/rr_gcode?gcode='+command)
             r = self.requests.get(URL,timeout=8)
@@ -296,8 +311,7 @@ class DuetWebAPI:
         if (r.ok):
            return(0)
         else:
-            print("gCode command return code = ",r.status_code)
-            print(r.reason)
+            logger.warning("Error running gCode command: return code " + str(r.status_code) + ' - ' + str(r.reason))
             return(r.status_code)
     
     def gCodeBatch(self,commands):
@@ -327,8 +341,7 @@ class DuetWebAPI:
                 URL=(f'{self._base_url}'+'/machine/code/')
                 r = self.requests.post(URL, data=command)
             if not (r.ok):
-                print("gCode command return code = ",r.status_code)
-                print(r.reason)
+                logger.warning("Error in gCodeBatch command: " + str(r.status_code) + str(r.reason) )
                 endsessionURL = (f'{self._base_url}'+'/rr_disconnect')
                 r2 = self.requests.get(endsessionURL,timeout=8)
                 return(r.status_code)
@@ -350,6 +363,7 @@ class DuetWebAPI:
             URL=(f'{self._base_url}'+'/rr_status?type=2')
             r = self.requests.get(URL,timeout=8)
             j = self.json.loads(r.text)
+            logger.error('getTemperatures no yet implemented for RRF V2 printers.')
             return('Error Dx05: getTemperatures not implemented (yet) for RRF V2 printers.')
         if (self.pt == 3):
             URL=(f'{self._base_url}'+'/machine/status')
@@ -379,7 +393,7 @@ class DuetWebAPI:
                     sessionURL = (f'{self._base_url}'+'/rr_connect?password=reprap')
                     r = self.requests.get(sessionURL,timeout=8)
                     if not r.ok:
-                        print('Error Dx06: in getStatus session: ', r)
+                        logger.warning('Error in getCurrentTool: '  + str(r))
                     buffer_size = 0
                     while buffer_size < 150:
                         bufferURL = (f'{self._base_url}'+'/rr_gcode')
@@ -392,7 +406,7 @@ class DuetWebAPI:
                         replyURL = (f'{self._base_url}'+'/rr_reply')
                         reply = self.requests.get(replyURL,timeout=8)
                         if buffer_size < 150:
-                            print('Buffer low: ', buffer_size)
+                            logger.debug('Buffer low - adding 0.6s delay before next call: ' + str(buffer_size))
                             time.sleep(0.6)
                 while self.getStatus() not in "idle":
                     time.sleep(0.5)
@@ -411,7 +425,7 @@ class DuetWebAPI:
                 ret=j['state']['currentTool']
                 return(ret)
         except Exception as e1:
-            print('Error Dx07: in getStatus: ',e1 )
+            logger.error('Unhandled exception in getCurrentTool: ' + str(e1))
 
     def getHeaters(self):
         import time
@@ -422,7 +436,7 @@ class DuetWebAPI:
                     sessionURL = (f'{self._base_url}'+'/rr_connect?password=reprap')
                     r = self.requests.get(sessionURL,timeout=8)
                     if not r.ok:
-                        print('Error Dx08: in getStatus session: ', r)
+                        logger.warning('Error in getHeaters session: ' + str(r))
                     buffer_size = 0
                     while buffer_size < 150:
                         bufferURL = (f'{self._base_url}'+'/rr_gcode')
@@ -435,7 +449,7 @@ class DuetWebAPI:
                         replyURL = (f'{self._base_url}'+'/rr_reply')
                         reply = self.requests.get(replyURL,timeout=8)
                         if buffer_size < 150:
-                            print('Buffer low: ', buffer_size)
+                            logger.debug('Buffer low - adding 0.6s delay before next call: ' + str(buffer_size))
                             time.sleep(0.6)
                 while self.getStatus() not in "idle":
                     time.sleep(0.5)
@@ -454,7 +468,7 @@ class DuetWebAPI:
                 ret=j['heat']['heaters']
                 return(ret)
         except Exception as e1:
-            print('Error Dx09: in getStatus: ',e1 )
+            logger.error('Unhandled exception in getHeaters: ' + str(e1))
 
     def isIdle(self):
         try:
@@ -464,7 +478,7 @@ class DuetWebAPI:
                     sessionURL = (f'{self._base_url}'+'/rr_connect?password=reprap')
                     r = self.requests.get(sessionURL,timeout=8)
                     if not r.ok:
-                        print('Error Dx10: in getStatus session: ', r)
+                        logger.warning('Error in isIdle: ' + str(r))
                     buffer_size = 0
                     while buffer_size < 150:
                         bufferURL = (f'{self._base_url}'+'/rr_gcode')
@@ -477,7 +491,7 @@ class DuetWebAPI:
                         replyURL = (f'{self._base_url}'+'/rr_reply')
                         reply = self.requests.get(replyURL,timeout=8)
                         if buffer_size < 150:
-                            print('Buffer low: ', buffer_size)
+                            logger.debug('Buffer low - adding 0.6s delay before next call: ' + str(buffer_size))
                             time.sleep(0.6)
                 URL=(f'{self._base_url}'+'/rr_status?type=2')
                 r = self.requests.get(URL,timeout=8)
@@ -490,7 +504,7 @@ class DuetWebAPI:
                     endsessionURL = (f'{self._base_url}'+'/rr_disconnect')
                     r2 = self.requests.get(endsessionURL,timeout=8)
                     if not r2.ok:
-                        print('Error Dx11: in getStatus end session: ', r2)
+                        logger.error('Unhandled exception in isIdle: ' + str(r2))
                         return False
                 if ('I' in s):
                     return True
@@ -509,7 +523,7 @@ class DuetWebAPI:
                 else:
                     return False
         except Exception as e1:
-            print('Error Dx12: in isIdle(): ',e1 )
+            logger.error('Unhandled exception in isIdle: ' + str(e1))
             return False
 ####
 # The following methods provide services built on the atomics above. 
@@ -581,7 +595,7 @@ class DuetWebAPI:
                     except:
                         buffer_size = 149
                     if buffer_size < 150:
-                        print('Buffer low: ', buffer_size)
+                        logger.debug('Buffer low - adding 0.6s delay before next call: ' + str(buffer_size))
                         time.sleep(0.6)
             URL=(f'{self._base_url}'+'/rr_gcode?gcode=G31')
             r = self.requests.get(URL,timeout=8)
@@ -610,7 +624,6 @@ class DuetWebAPI:
         else:
             _errCode = float(r.status_code)
             _errMsg = r.reason
-            print("getTriggerHeight command return code = ",r.status_code)
-            print(r.reason)
+            logger.error("Bad resposne in getTriggerHeight: " + str(r.status_code) + ' - ' + str(r.reason))
             return (_errCode, _errMsg, None )
     

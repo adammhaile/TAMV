@@ -67,6 +67,9 @@ import matplotlib.cm as cm
 import matplotlib.patches as patches
 from matplotlib.ticker import FormatStrFormatter
 
+#logging import
+import logging
+
 # styles
 global style_green, style_red, style_disabled, style_orange
 style_green = 'background-color: green; color: white;'
@@ -249,7 +252,7 @@ class CameraSettingsDialog(QDialog):
             (brightness_input, contrast_input, saturation_input, hue_input) = self.parent().video_thread.getProperties()
         except Exception as set1:
             self.updateStatusbar('Error fetching camera parameters.')
-            print('ERROR: Camera Settings: ' + str(set1))
+            logger.error('Camera Settings: ' + str(set1))
         
         # Set layout details
         self.layout = QVBoxLayout()
@@ -565,25 +568,25 @@ class CalibrateNozzles(QThread):
                 self.brightness = brightness
                 self.cap.set(cv2.CAP_PROP_BRIGHTNESS,self.brightness)
         except Exception as b1: 
-            print('Brightness exception: ', b1 )
+            logger.warning('Brightness exception: ' + str(b1) )
         try:
             if int(contrast) >= 0:
                 self.contrast = contrast
                 self.cap.set(cv2.CAP_PROP_CONTRAST,self.contrast)
         except Exception as c1:
-            print('Contrast exception: ', c1 )
+            logger.warning('Contrast exception: ' + str(c1) )
         try:
             if int(saturation) >= 0:
                 self.saturation = saturation
                 self.cap.set(cv2.CAP_PROP_SATURATION,self.saturation)
         except Exception as s1:
-            print('Saturation exception: ', s1 )
+            logger.warning('Saturation exception: ' + str(s1) )
         try:
             if int(hue) >= 0:
                 self.hue = hue
                 self.cap.set(cv2.CAP_PROP_HUE,self.hue)
         except Exception as h1:
-            print('Hue exception: ', h1 )
+            logger.warning('Hue exception: '  + str(h1) )
 
     def getProperties(self):
         return (self.brightness_default, self.contrast_default, self.saturation_default,self.hue_default)
@@ -2583,7 +2586,31 @@ class App(QMainWindow):
 
 if __name__=='__main__':
     os.putenv("QT_LOGGING_RULES","qt5ct.debug=false")
+    # Create main application logger
+    logger = logging.getLogger("TAMV")
+    logger.setLevel(logging.DEBUG)
+    # create file handler with logs even debug messages
+    fh = logging.FileHandler('TAMV.log')
+    fh.setLevel(logging.DEBUG)
+    # create console handler with a higher log level than the file logger
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.WARNING)
+    # create a formatter and add it to the handlers
+    dateformat = '%H:%M:%S'
+    file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(funcName)s (%(lineno)d) - %(message)s',datefmt=dateformat)
+    #console_formatter = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(name)s - %(funcName)s (%(lineno)d) - %(message)s',datefmt=dateformat)
+    console_formatter = logging.Formatter(fmt='%(name)-15s: %(levelname)-9s %(funcName)-10s (%(lineno)d): %(message)s')
+    fh.setFormatter(file_formatter)
+    ch.setFormatter(console_formatter)
+    # add the handlers to the logger
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+
+
+
+    logger.debug('TAMV starting..')
     app = QApplication(sys.argv)
     a = App()
     a.show()
+    logger.debug('TAMV exiting..')
     sys.exit(app.exec_())
