@@ -728,6 +728,8 @@ class CalibrateNozzles(QThread):
                     app.processEvents()
                     # Capture new position as CP
                     self.parent().cp_coords = self.parent().printer.getCoords()
+                    self.parent().cp_string = '(' + str(self.parent().cp_coords['X']) + ', ' + str(self.parent().cp_coords['Y']) + ')'
+                    self.parent().readyToCalibrate()
                     # signal end of execution
                     self._running = False
                     self.align_endstop = False
