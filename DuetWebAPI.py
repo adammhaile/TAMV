@@ -51,7 +51,7 @@ class DuetWebAPI:
                 self._rrf2 = True
                 logger.warning('unknown board+RRF combo - defaulting to RRF2')
             self.pt = 2
-            logger.info('Connected to Duet Firmware: '+ firmwareName + '- V'+firmwareVersion)
+            logger.info('Connected to: '+ firmwareName + '- V'+firmwareVersion)
             return
         except:
             try:
@@ -62,7 +62,7 @@ class DuetWebAPI:
                 firmwareName = j['boards'][0]['firmwareName']
                 firmwareVersion = j['boards'][0]['firmwareVersion']
                 self.pt = 3
-                logger.info('Connected to Duet Firmware: '+ firmwareName + '- V'+firmwareVersion)
+                logger.info('Connected to: '+ firmwareName + '- V'+firmwareVersion)
                 return
             except:
                 logger.error( self._base_url + " does not appear to be an RRF2 or RRF3 printer")
