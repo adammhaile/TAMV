@@ -131,7 +131,9 @@ _[back to top](#table-of-contents)_
 # Ubuntu host installation notes
 ## Installing openCV on Ubuntu 20.04 and above
  Most Ubuntu releases already have a precompiled openCV library that can be installed using apt. To do this, update the apt repositories, and install the ```libopencv-dev``` and ```python3-opencv``` packages. 
+ 
  Here's the code to do just that:
+ 
  ```sudo apt update```
  ```sudo apt install libopencv-dev python3-opencv```
  
@@ -141,11 +143,13 @@ _[back to top](#table-of-contents)_
 Within the GNOME desktop manager, the default behavior is that modal pop-up windows are centered on the parent window and are completely blocking. This makes it very difficult to see the camera preview image, and generally makes using TAMV a pain when viewing any of the pop-up windows (such as Debug Information, Camera Settings, or the Jog Panel).
  
  To override this default behavior, simply open a terminal window, and type the following command: 
+ 
  ```gsettings set org.gnome.mutter attach-modal-dialogs false```
  
  Please note that this changes the default behavior of your entire desktop environment, and will apply to modal pop-up windows across your entire Ubuntu machine.
  
  To revert Ubuntu to its default settings, run the following command:
+ 
  ```gsettings set org.gnome.mutter attach-modal-dialogs true```
  
  _[back to top](#table-of-contents)_
