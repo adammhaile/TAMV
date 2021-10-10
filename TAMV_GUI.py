@@ -2581,13 +2581,13 @@ if __name__=='__main__':
     os.putenv("QT_LOGGING_RULES","qt5ct.debug=false")
     # Create main application logger
     logger = logging.getLogger("TAMV")
-    logger.setLevel(logging.DEBUG)
+    #logger.setLevel(logging.DEBUG)
     # create file handler with logs even debug messages
     fh = logging.FileHandler('TAMV.log')
     fh.setLevel(logging.DEBUG)
     # create console handler with a higher log level than the file logger
     ch = logging.StreamHandler()
-    ch.setLevel(logging.WARNING)
+    ch.setLevel(logging.INFO)
     # create a formatter and add it to the handlers
     file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(funcName)s (%(lineno)d) - %(message)s')
     #console_formatter = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(name)s - %(funcName)s (%(lineno)d) - %(message)s',datefmt=dateformat)
