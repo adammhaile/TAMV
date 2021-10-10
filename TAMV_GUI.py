@@ -1578,8 +1578,8 @@ class App(QMainWindow):
 
     def calibrate_CP(self):
         self.video_thread.align_endstop = True
-        while self.video_thread.align_endstop:
-            None
+        while self.video_thread.align_endstop and self.video_thread._running:
+            app.processEvents()
         # Capture new position as CP
         self.cp_coords = self.printer.getCoords()
         self.cp_string = '(' + str(self.cp_coords['X']) + ', ' + str(self.cp_coords['Y']) + ')'
