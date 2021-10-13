@@ -141,10 +141,10 @@ class CPDialog(QDialog):
         self.button_y_right.clicked.connect(lambda: self.buttonClicked('y_right'))
 
         # Z buttons
-        self.button_z_down = QPushButton('-')
+        self.button_z_down = QPushButton('-', objectName='plus')
         self.button_z_down.setFont(panel_font)
         self.button_z_down.setFixedSize(60,60)
-        self.button_z_up = QPushButton('+')
+        self.button_z_up = QPushButton('+', objectName='plus')
         self.button_z_up.setFont(panel_font)
         self.button_z_up.setFixedSize(60,60)
         # Z button actions
@@ -1366,6 +1366,9 @@ class App(QMainWindow):
             QPushButton:enabled {\
                 background-color: green;\
                 color: white;\
+            }\
+            QPushButton#plus {\
+                font: 20px;\
             }\
             QPushButton#debug,QMessageBox > #debug {\
                 background-color: blue;\
