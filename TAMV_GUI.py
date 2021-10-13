@@ -1364,9 +1364,207 @@ class App(QMainWindow):
                 app_screen = self.frameGeometry()
                 app_screen.moveCenter(screen.center())
                 self.move(app_screen.topLeft())
+        
+        # Call style sheet handler
+        self.createStyles()
+
+        # LOAD USER SAVED PARAMETERS OR CREATE DEFAULTS
+        self.loadUserParameters()
+
+        # GUI ELEMENTS DEFINITION
+        # Menubar
+        if not self.small_display:
+            self._createActions()
+            self._createMenuBar()
+            self._connectActions()
+        self.centralWidget = QWidget()
+        self.setCentralWidget(self.centralWidget)
+        
+        # create the label that holds the image
+        self.image_label = OverlayLabel()
+        self.image_label.setFixedSize( display_width, display_height )
+        pixmap = QPixmap( display_width, display_height )
+        self.image_label.setPixmap(pixmap)
+        
+        # create a status bar
+        self.statusBar = QStatusBar()
+        self.statusBar.showMessage('Loading up video feed and libraries..',5000)
+        self.setStatusBar( self.statusBar )
+        
+        # CP location on statusbar
+        self.cp_label = QLabel('<b>CP:</b> <i>undef</i>')
+        self.statusBar.addPermanentWidget(self.cp_label)
+        self.cp_label.setStyleSheet(style_red)
+        
+        # Connection status on statusbar
+        self.connection_status = QLabel('Disconnected')
+        self.connection_status.setStyleSheet(style_red)
+        self.statusBar.addPermanentWidget(self.connection_status)
+        # BUTTONS
+        # main interface elements
+        self.createGUIElements()
+        # create a grid box layout
+        grid = QGridLayout()
+        grid.setSpacing(3)
+        
+        #HBHBHB: TESTING CP AUTOCALIBRATE
+        self.cp_calibration_button = QPushButton('Auto CP')
+        self.cp_calibration_button.clicked.connect(self.calibrate_CP)
+        self.cp_calibration_button.setDisabled(True)
+        
+        self.createJogPanelButtons()
+        self.panel_box.setDisabled(True)
+
+        ################################################### ELEMENT POSITIONING ###################################################
+        # row, col, rowSpan, colSpan, alignment
+        # connect button
+        grid.addWidget( self.connection_button,     1,  1,  1,  1,  Qt.AlignLeft )
+        # detect checkbox
+        grid.addWidget( self.detect_box,            1,  2,  1,  1,  Qt.AlignLeft )
+        # xray checkbox
+        grid.addWidget( self.xray_box,              1,  3,  1,  1,  Qt.AlignLeft )
+        # loose detection checkbox
+        grid.addWidget( self.loose_box,             1,  4,  1,  1,  Qt.AlignLeft )
+        # disconnect button
+        grid.addWidget( self.disconnection_button,  1,  7,  1,  1, Qt.AlignCenter )
+        ###########################################################################################################################
+        # main image viewer
+        grid.addWidget( self.image_label,           2,  1,  5,  6,  Qt.AlignLeft )
+        # Jog Panel
+        grid.addWidget(self.panel_box,              2,  7,  1,  1,  Qt.AlignCenter | Qt.AlignTop )
+        # tool selection table
+        grid.addWidget( self.tool_box,              3,  7,  1,  1,  Qt.AlignCenter | Qt.AlignTop )
+        # instruction box
+        grid.addWidget( self.instructions_box,      4,  7,  1,  1,  Qt.AlignCenter | Qt.AlignTop )
+        # conditional exit button
+        if self.small_display:
+            grid.addWidget( self.exit_button,       5,  7,  1,  1,  Qt.AlignCenter | Qt.AlignBottom )
+        # manual alignment button
+        grid.addWidget( self.manual_button,         6,  7,  1,  1,  Qt.AlignCenter | Qt.AlignBottom )
+        ###########################################################################################################################
+        # set controlled point button
+        grid.addWidget( self.cp_button,             7,  1,  1,  1,  Qt.AlignLeft )
+        # start calibration button
+        grid.addWidget( self.calibration_button,    7,  2,  1,  1,  Qt.AlignLeft )
+        # cycle repeat label
+        grid.addWidget( self.repeat_label,          7,  3,  1,  1,  Qt.AlignLeft )
+        # cycle repeat selector
+        grid.addWidget( self.repeatSpinBox,         7,  4,  1,  1,  Qt.AlignLeft )
+        # CP auto calibration button
+        grid.addWidget( self.cp_calibration_button, 7,  5,  1,  1,  Qt.AlignRight )
+        # debug window button
+        grid.addWidget( self.debug_button,          7,  7,  1,  1,  Qt.AlignCenter | Qt.AlignBottom )
+        ################################################# END ELEMENT POSITIONING #################################################
+
+        # set the grid layout as the widgets layout
+        self.centralWidget.setLayout(grid)
+        # start video feed
+        self.startVideo()
+        # flag to draw circle
+        self.crosshair = False
+        self.crosshair_alignment = False
+
+    def createGUIElements(self):
+        # Connect
+        self.connection_button = QPushButton('Connect..')
+        self.connection_button.setToolTip('Connect to a Duet machine..')
+        self.connection_button.clicked.connect(self.connectToPrinter)
+        self.connection_button.setFixedWidth(170)
+        # Disconnect
+        self.disconnection_button = QPushButton('STOP / DISCONNECT')
+        self.disconnection_button.setToolTip('End current operation,\nunload tools, and return carriage to CP\nthen disconnect.')
+        self.disconnection_button.clicked.connect(self.disconnectFromPrinter)
+        self.disconnection_button.setFixedWidth(170)
+        self.disconnection_button.setObjectName('terminate')
+        self.disconnection_button.setDisabled(True)
+        # Controlled point
+        self.cp_button = QPushButton('Set Controlled Point..')
+        self.cp_button.setToolTip('Define your origin point\nto calculate all tool offsets from.')
+        self.cp_button.clicked.connect(self.controlledPoint)
+        self.cp_button.setFixedWidth(170)
+        #self.cp_button.setStyleSheet(style_disabled)
+        self.cp_button.setDisabled(True)
+        # Calibration
+        self.calibration_button = QPushButton('Start Tool Alignment')
+        self.calibration_button.setToolTip('Start alignment process.\nMAKE SURE YOUR CARRIAGE IS CLEAR TO MOVE ABOUT WITHOUT COLLISIONS!')
+        self.calibration_button.clicked.connect(self.runCalibration)
+        #self.calibration_button.setStyleSheet(style_disabled)
+        self.calibration_button.setDisabled(True)
+        self.calibration_button.setFixedWidth(170)
+        # Debug Info
+        self.debug_button = QPushButton('Debug Information')
+        self.debug_button.setToolTip('Display current debug info for troubleshooting\nand to display final G10 commands')
+        self.debug_button.clicked.connect(self.displayDebug)
+        self.debug_button.setFixedWidth(170)
+        self.debug_button.setObjectName('debug')
+        # Exit
+        self.exit_button = QPushButton('Quit')
+        self.exit_button.setToolTip('Unload tools, disconnect, and quit TAMV.')
+        self.exit_button.clicked.connect(self.close)
+        self.exit_button.setFixedWidth(170)
+        
+        # OTHER ELEMENTS
+        # Repeat spinbox
+        self.repeat_label = QLabel('Cycles: ')
+        self.repeat_label.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
+        self.repeatSpinBox = QSpinBox()
+        self.repeatSpinBox.setValue(1)
+        self.repeatSpinBox.setMinimum(1)
+        self.repeatSpinBox.setSingleStep(1)
+        self.repeatSpinBox.setDisabled(True)
+        # Manual alignment button
+        self.manual_button = QPushButton('Manual offset')
+        self.manual_button.setToolTip('After jogging tool to the correct position in the window, capture and calculate offset.')
+        self.manual_button.clicked.connect(self.manualOffset)
+        self.manual_button.setDisabled(True)
+        self.manual_button.setFixedWidth(170)
+        # Tool buttons table
+        self.tool_boxLayout = QHBoxLayout()
+        self.tool_boxLayout.setSpacing(1)
+        self.tool_box = QGroupBox()
+        self.tool_boxLayout.setContentsMargins(0,0,0,0)
+        self.tool_box.setLayout(self.tool_boxLayout)
+        self.tool_box.setVisible(False)
+        self.toolButtons = []
+        # Xray checkbox
+        self.xray_box = QCheckBox('X-ray')
+        self.xray_box.setChecked(False)
+        self.xray_box.stateChanged.connect(self.toggle_xray)
+        self.xray_box.setDisabled(True)
+        self.xray_box.setVisible(False)
+        # Loose checkbox
+        self.loose_box = QCheckBox('Loose detection')
+        self.loose_box.setChecked(False)
+        self.loose_box.stateChanged.connect(self.toggle_loose)
+        self.loose_box.setDisabled(True)
+        self.loose_box.setVisible(False)
+        # Detection checkbox
+        self.detect_box = QCheckBox('Detect ON')
+        self.detect_box.setChecked(False)
+        self.detect_box.stateChanged.connect(self.toggle_detect)
+
+        # Instruction box
+        self.instructions_layout = QGridLayout()
+        self.instructions_layout.setSpacing(1)
+
+        self.instructions_box = QGroupBox('Instructions')
+        self.instructions_box.setObjectName('instructions_box')
+        self.instructions_box.setContentsMargins(0,0,0,0)
+        self.instructions_box.setLayout(self.instructions_layout)
+
+        self.instructions_text = QLabel('Welcome to TAMV.<br>Please connect to your printer.')
+        self.instructions_text.setObjectName('instructions_text')
+        self.instructions_text.setContentsMargins(12,5,12,5)
+        self.instructions_text.setWordWrap(True)
+        self.instructions_layout.addWidget(self.instructions_text, 0, 0)
+
+    def createStyles(self):
         # SET UP STYLESHEETS FOR GUI ELEMENTS
         self.setStyleSheet(
             '\
+            QLabel#instructions_text {\
+                background-color: yellow;\
+            }\
             QPushButton {\
                 border: 1px solid #adadad;\
                 border-style: outset;\
@@ -1468,169 +1666,6 @@ class App(QMainWindow):
             }\
             '
         )
-        # LOAD USER SAVED PARAMETERS OR CREATE DEFAULTS
-        self.loadUserParameters()
-        # GUI ELEMENTS DEFINITION
-        # Menubar
-        if not self.small_display:
-            self._createActions()
-            self._createMenuBar()
-            self._connectActions()
-        self.centralWidget = QWidget()
-        self.setCentralWidget(self.centralWidget)
-        # create the label that holds the image
-        self.image_label = OverlayLabel()
-        self.image_label.setFixedSize( display_width, display_height )
-        pixmap = QPixmap( display_width, display_height )
-        self.image_label.setPixmap(pixmap)
-        # create a status bar
-        self.statusBar = QStatusBar()
-        self.statusBar.showMessage('Loading up video feed and libraries..',5000)
-        self.setStatusBar( self.statusBar )
-        # CP location on statusbar
-        self.cp_label = QLabel('<b>CP:</b> <i>undef</i>')
-        self.statusBar.addPermanentWidget(self.cp_label)
-        self.cp_label.setStyleSheet(style_red)
-        # Connection status on statusbar
-        self.connection_status = QLabel('Disconnected')
-        self.connection_status.setStyleSheet(style_red)
-        self.statusBar.addPermanentWidget(self.connection_status)
-        # BUTTONS
-        # Connect
-        self.connection_button = QPushButton('Connect..')
-        self.connection_button.setToolTip('Connect to a Duet machine..')
-        self.connection_button.clicked.connect(self.connectToPrinter)
-        self.connection_button.setFixedWidth(170)
-        # Disconnect
-        self.disconnection_button = QPushButton('STOP / DISCONNECT')
-        self.disconnection_button.setToolTip('End current operation,\nunload tools, and return carriage to CP\nthen disconnect.')
-        self.disconnection_button.clicked.connect(self.disconnectFromPrinter)
-        self.disconnection_button.setFixedWidth(170)
-        self.disconnection_button.setObjectName('terminate')
-        self.disconnection_button.setDisabled(True)
-        # Controlled point
-        self.cp_button = QPushButton('Set Controlled Point..')
-        self.cp_button.setToolTip('Define your origin point\nto calculate all tool offsets from.')
-        self.cp_button.clicked.connect(self.controlledPoint)
-        self.cp_button.setFixedWidth(170)
-        #self.cp_button.setStyleSheet(style_disabled)
-        self.cp_button.setDisabled(True)
-        # Calibration
-        self.calibration_button = QPushButton('Start Tool Alignment')
-        self.calibration_button.setToolTip('Start alignment process.\nMAKE SURE YOUR CARRIAGE IS CLEAR TO MOVE ABOUT WITHOUT COLLISIONS!')
-        self.calibration_button.clicked.connect(self.runCalibration)
-        #self.calibration_button.setStyleSheet(style_disabled)
-        self.calibration_button.setDisabled(True)
-        self.calibration_button.setFixedWidth(170)
-        # Debug Info
-        self.debug_button = QPushButton('Debug Information')
-        self.debug_button.setToolTip('Display current debug info for troubleshooting\nand to display final G10 commands')
-        self.debug_button.clicked.connect(self.displayDebug)
-        self.debug_button.setFixedWidth(170)
-        self.debug_button.setObjectName('debug')
-        # Exit
-        self.exit_button = QPushButton('Quit')
-        self.exit_button.setToolTip('Unload tools, disconnect, and quit TAMV.')
-        self.exit_button.clicked.connect(self.close)
-        self.exit_button.setFixedWidth(170)
-        
-        # OTHER ELEMENTS
-        # Repeat spinbox
-        self.repeat_label = QLabel('Cycles: ')
-        self.repeat_label.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
-        self.repeatSpinBox = QSpinBox()
-        self.repeatSpinBox.setValue(1)
-        self.repeatSpinBox.setMinimum(1)
-        self.repeatSpinBox.setSingleStep(1)
-        self.repeatSpinBox.setDisabled(True)
-        # Manual alignment button
-        self.manual_button = QPushButton('Manual offset')
-        self.manual_button.setToolTip('After jogging tool to the correct position in the window, capture and calculate offset.')
-        self.manual_button.clicked.connect(self.manualOffset)
-        self.manual_button.setDisabled(True)
-        self.manual_button.setFixedWidth(170)
-        # Tool buttons table
-        self.toolBoxLayout = QHBoxLayout()
-        self.toolBoxLayout.setSpacing(1)
-        self.toolBox = QGroupBox()
-        self.toolBoxLayout.setContentsMargins(0,0,0,0)
-        self.toolBox.setLayout(self.toolBoxLayout)
-        self.toolBox.setVisible(False)
-        self.toolButtons = []
-        # Xray checkbox
-        self.xray_box = QCheckBox('X-ray')
-        self.xray_box.setChecked(False)
-        self.xray_box.stateChanged.connect(self.toggle_xray)
-        self.xray_box.setDisabled(True)
-        self.xray_box.setVisible(False)
-        # Loose checkbox
-        self.loose_box = QCheckBox('Loose detection')
-        self.loose_box.setChecked(False)
-        self.loose_box.stateChanged.connect(self.toggle_loose)
-        self.loose_box.setDisabled(True)
-        self.loose_box.setVisible(False)
-        # Detection checkbox
-        self.detect_box = QCheckBox('Detect ON')
-        self.detect_box.setChecked(False)
-        self.detect_box.stateChanged.connect(self.toggle_detect)
-        # create a grid box layout
-        grid = QGridLayout()
-        grid.setSpacing(3)
-        
-        #HBHBHB: TESTING CP AUTOCALIBRATE
-        self.cp_calibration_button = QPushButton('Auto CP')
-        self.cp_calibration_button.clicked.connect(self.calibrate_CP)
-        self.cp_calibration_button.setDisabled(True)
-        
-        self.createJogPanelButtons()
-        self.panel_box.setDisabled(True)
-
-        ################################################### ELEMENT POSITIONING ###################################################
-        # row, col, rowSpan, colSpan, alignment
-        # connect button
-        grid.addWidget( self.connection_button,     1,  1,  1,  1,  Qt.AlignLeft )
-        # detect checkbox
-        grid.addWidget( self.detect_box,            1,  2,  1,  1,  Qt.AlignLeft )
-        # xray checkbox
-        grid.addWidget( self.xray_box,              1,  3,  1,  1,  Qt.AlignLeft )
-        # loose detection checkbox
-        grid.addWidget( self.loose_box,             1,  4,  1,  1,  Qt.AlignLeft )
-        # disconnect button
-        grid.addWidget( self.disconnection_button,  1,  7,  1,  1, Qt.AlignCenter )
-        ###########################################################################################################################
-        # main image viewer
-        grid.addWidget( self.image_label,           2,  1,  4,  6,  Qt.AlignLeft )
-        # Jog Panel
-        grid.addWidget(self.panel_box,              2,  7,  1,  1,  Qt.AlignCenter | Qt.AlignTop )
-        # tool selection table
-        grid.addWidget( self.toolBox,               3,  7,  1,  1,  Qt.AlignCenter | Qt.AlignTop )
-        # conditional exit button
-        if self.small_display:
-            grid.addWidget( self.exit_button,       4,  7,  1,  1,  Qt.AlignCenter | Qt.AlignBottom )
-        # manual alignment button
-        grid.addWidget( self.manual_button,         5,  7,  1,  1,  Qt.AlignCenter | Qt.AlignBottom )
-        ###########################################################################################################################
-        # set controlled point button
-        grid.addWidget( self.cp_button,             6,  1,  1,  1,  Qt.AlignLeft )
-        # start calibration button
-        grid.addWidget( self.calibration_button,    6,  2,  1,  1,  Qt.AlignLeft )
-        # cycle repeat label
-        grid.addWidget( self.repeat_label,          6,  3,  1,  1,  Qt.AlignLeft )
-        # cycle repeat selector
-        grid.addWidget( self.repeatSpinBox,         6,  4,  1,  1,  Qt.AlignLeft )
-        # CP auto calibration button
-        grid.addWidget( self.cp_calibration_button, 6,  5,  1,  1,  Qt.AlignRight )
-        # debug window button
-        grid.addWidget( self.debug_button,          6,  7,  1,  1,  Qt.AlignCenter | Qt.AlignBottom )
-        ################################################# END ELEMENT POSITIONING #################################################
-
-        # set the grid layout as the widgets layout
-        self.centralWidget.setLayout(grid)
-        # start video feed
-        self.startVideo()
-        # flag to draw circle
-        self.crosshair = False
-        self.crosshair_alignment = False
 
     def jogPanelButtonClicked(self, buttonName):
         increment_amount = 1
@@ -2081,8 +2116,8 @@ class App(QMainWindow):
             else: 
                 button.setChecked(False)
             button.clicked.connect(self.callTool)
-            self.toolBoxLayout.addWidget(button)
-        self.toolBox.setVisible(True)
+            self.tool_boxLayout.addWidget(button)
+        self.tool_box.setVisible(True)
         # Connection succeeded, update GUI first
         self.updateStatusbar('Connected to a Duet V'+str(self.printer.printerType()))
         self.connection_button.setText('Online: ' + self.printerURL[self.printerURL.rfind('/')+1:])
@@ -2104,6 +2139,10 @@ class App(QMainWindow):
         # update connection status indicator to green
         self.connection_status.setStyleSheet(style_green)
         self.cp_label.setStyleSheet(style_red)
+
+        # Update instructions box
+        self.instructions_text.setText('Hello world. Scoot your endstop into frame and let\'s boogie.')
+        self.instructions_text.setStyleSheet('background-color: red; color: white')
 
     def callTool(self):
         self.manual_button.setDisabled(False)
@@ -2213,12 +2252,12 @@ class App(QMainWindow):
         self.video_thread.alignment = False
         self.cp_calibration_button.setDisabled(True)
 
-        index = self.toolBoxLayout.count()-1
+        index = self.tool_boxLayout.count()-1
         while index >= 0:
-            curWidget = self.toolBoxLayout.itemAt(index).widget()
+            curWidget = self.tool_boxLayout.itemAt(index).widget()
             curWidget.setParent(None)
             index -= 1
-        self.toolBox.setVisible(False)
+        self.tool_box.setVisible(False)
         self.toolButtons = []
         self.repaint()
 
@@ -2266,7 +2305,7 @@ class App(QMainWindow):
         self.cp_button.setDisabled(False)
         self.cp_calibration_button.setDisabled(False)
 
-        self.toolBox.setVisible(True)
+        self.tool_box.setVisible(True)
         self.repeatSpinBox.setDisabled(False)
 
         if len(self.calibrationResults) > 1:
@@ -2544,7 +2583,7 @@ class App(QMainWindow):
         self.xray_box.setDisabled(True)
         self.xray_box.setChecked(False)
         self.loose_box.setDisabled(True)
-        self.toolBox.setVisible(False)
+        self.tool_box.setVisible(False)
         self.cp_calibration_button.setDisabled(True)
         self.repaint()
         # End video threads and restart default thread
@@ -2632,7 +2671,7 @@ class App(QMainWindow):
         self.loose_box.setDisabled(False)
         self.loose_box.setChecked(False)
         self.loose_box.setVisible(True)
-        self.toolBox.setVisible(False)
+        self.tool_box.setVisible(False)
         self.detect_box.setVisible(False)
         self.cp_calibration_button.setDisabled(True)
         for i in range(self.num_tools):
