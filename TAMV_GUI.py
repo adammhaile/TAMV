@@ -726,11 +726,6 @@ class CalibrateNozzles(QThread):
                     self.calibrateTool(tool='endstop', rep=1)
                     # process GUI events
                     app.processEvents()
-                    #HBHBHBHBHBHB Capture new position as CP
-                    #self.parent().cp_coords = self.parent().printer.getCoords()
-                    #self.parent().cp_string = '(' + str(self.parent().cp_coords['X']) + ', ' + str(self.parent().cp_coords['Y']) + ')'
-                    #self.parent().readyToCalibrate()
-                    # signal end of execution
                     self._running = False
                     self.align_endstop = False
                 # Update status bar
@@ -1130,8 +1125,9 @@ class CalibrateNozzles(QThread):
                             _return['time'] = np.around(time.time() - self.startTime,1)
                             self.message_update.emit('Nozzle calibrated: offset coordinates X' + str(_return['X']) + ' Y' + str(_return['Y']) )
                             self.parent().debugString += 'T' + str(tool) + ', cycle ' + str(rep+1) + ' completed in ' + str(_return['time']) + ' seconds.\n'
-                            logger.info('T' + str(tool) + ', cycle ' + str(rep+1) + ' completed in ' + str(_return['time']) + ' seconds.')
                             self.message_update.emit('T' + str(tool) + ', cycle ' + str(rep+1) + ' completed in ' + str(_return['time']) + ' seconds.')
+                            logger.debug('T' + str(tool) + ', cycle ' + str(rep+1) + ' completed in ' + str(_return['time']) + 's and ' + str(self.calibration_moves) + ' movements.')
+                            logger.info( 'Tool ' + str(tool) +' offsets are X' + str(_return['X']) + ' Y' + str(_return['Y']) + '(G10 P' + str(tool) + ' X' + str(_return['X']) + ' Y' + str(_return['Y']) +')')
                         else:
                             self.message_update.emit('CP auto-calibrated.')
                         self.parent().printer.gCode( 'G1 F13200' )
@@ -1325,13 +1321,24 @@ class App(QMainWindow):
             app_screen = self.frameGeometry()
         # larger displays - normal window
         else:
-            self.small_display = False
-            display_width = 640
-            display_height = 480
-            self.setGeometry(QStyle.alignedRect(Qt.LeftToRight,Qt.AlignHCenter,QSize(800,600),screen))
-            app_screen = self.frameGeometry()
-            app_screen.moveCenter(screen.center())
-            self.move(app_screen.topLeft())
+            debugging_small_display = False
+            if debugging_small_display:
+                self.small_display = True
+                logger.info('800x600 desktop detected')
+                display_width = 512
+                display_height = 384
+                self.setWindowFlag(Qt.FramelessWindowHint)
+                self.showFullScreen()
+                self.setGeometry(0,0,700,500)
+                app_screen = self.frameGeometry()
+            else:
+                self.small_display = False
+                display_width = 640
+                display_height = 480
+                self.setGeometry(QStyle.alignedRect(Qt.LeftToRight,Qt.AlignHCenter,QSize(800,600),screen))
+                app_screen = self.frameGeometry()
+                app_screen.moveCenter(screen.center())
+                self.move(app_screen.topLeft())
         # SET UP STYLESHEETS FOR GUI ELEMENTS
         self.setStyleSheet(
             '\
@@ -2034,7 +2041,8 @@ class App(QMainWindow):
         self.cp_label.setText('<b>CP:</b> <i>undef</i>')
         self.cp_label.setStyleSheet(style_red)
         self.repeatSpinBox.setDisabled(True)
-        self.analysisMenu.setDisabled(True)
+        if not self.small_display:
+            self.analysisMenu.setDisabled(True)
         self.detect_box.setChecked(False)
         self.detect_box.setDisabled(False)
         self.xray_box.setDisabled(True)
