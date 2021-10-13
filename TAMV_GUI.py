@@ -1374,11 +1374,19 @@ class App(QMainWindow):
                 font: 14px;\
                 padding: 6px;\
             }\
-            QPushButton:hover,QPushButton:enabled:hover,QPushButton:enabled:!checked:hover {\
+            QPushButton#calibrating:enabled {\
+                background-color: orange;\
+                color: white;\
+            }\
+            QPushButton#completed:enabled {\
+                background-color: blue;\
+                color: white;\
+            }\
+            QPushButton:hover,QPushButton:enabled:hover,QPushButton:enabled:!checked:hover,QPushButton#completed:enabled:hover {\
                 background-color: #27ae60;\
                 border: 1px solid #aaaaaa;\
             }\
-            QPushButton:pressed,QPushButton:enabled:pressed,QPushButton:enabled:checked {\
+            QPushButton:pressed,QPushButton:enabled:pressed,QPushButton:enabled:checked,QPushButton#completed:enabled:pressed {\
                 background-color: #ae2776;\
                 border: 1px solid #aaaaaa;\
             }\
@@ -1457,14 +1465,6 @@ class App(QMainWindow):
             }\
             QInputDialog QDialogButtonBox > QPushButton:hover:!pressed, QDialog QPushButton:hover:!pressed {\
                 background-color: #27ae60;\
-            }\
-            QPushButton#calibrating:enabled {\
-                background-color: blue;\
-                color: white;\
-            }\
-            QPushButton#completed:enabled {\
-                background-color: orange;\
-                color: white;\
             }\
             '
         )
@@ -1951,11 +1951,8 @@ class App(QMainWindow):
             self.statusBar.showMessage('Error in manual capture.')
             logger.error('Error in manual capture: ' + str(e2))
         logger.debug('Manual offset calculation ending..')
-        #self.toolBox.itemAt(_active).setObjectName('completed')
-        self.toolButtons[_active].setObjectName('calibrating')
-        self.toolBox.repaint()
-        for item in self.toolBox.findChildren(QPushButton):
-            print(item.objectName())
+        self.toolButtons[_active].setObjectName('completed')
+        self.toolButtons[_active].setStyle(self.toolButtons[_active].style())
         self.crosshair_alignment = False
 
     def startVideo(self):
