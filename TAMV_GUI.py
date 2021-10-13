@@ -18,7 +18,6 @@ from PyQt5.QtWidgets import (
     QAction,
     QApplication,
     QCheckBox,
-    QCheckBox,
     QComboBox,
     QDesktopWidget,
     QDialog,
@@ -35,6 +34,7 @@ from PyQt5.QtWidgets import (
     QMenuBar,
     QMessageBox,
     QPushButton,
+    QButtonGroup,
     QSlider,
     QSpinBox,
     QStatusBar,
@@ -96,107 +96,177 @@ class CPDialog(QDialog):
         # add information panel
         self.cp_info = QLabel(summary)
         # add jogging grid
-        self.buttons={}
         buttons_layout = QGridLayout()
 
-        # X
-        self.button_x1 = QPushButton('-1')
-        self.button_x2 = QPushButton('-0.1')
-        self.button_x3 = QPushButton('-0.01')
-        self.button_x4 = QPushButton('+0.01')
-        self.button_x5 = QPushButton('+0.1')
-        self.button_x6 = QPushButton('+1')
-        # set X sizes
-        self.button_x1.setFixedSize(60,60) 
-        self.button_x2.setFixedSize(60,60)
-        self.button_x3.setFixedSize(60,60)
-        self.button_x4.setFixedSize(60,60)
-        self.button_x5.setFixedSize(60,60)
-        self.button_x6.setFixedSize(60,60)
-        # attach actions
-        self.button_x1.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X-1 G90'))
-        self.button_x2.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X-0.1 G90'))
-        self.button_x3.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X-0.01 G90'))
-        self.button_x4.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X0.01 G90'))
-        self.button_x5.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X0.1 G90'))
-        self.button_x6.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X1 G90'))
-        # add buttons to window
+        # Increment size buttons
+        self.button_1 = QPushButton('1')
+        self.button_1.setFixedSize(60,60)
+        self.button_01 = QPushButton('0.1')
+        self.button_01.setFixedSize(60,60)
+        self.button_001 = QPushButton('0.01')
+        self.button_001.setFixedSize(60,60)
+        
+        # Create increment buttons group to enable radio-button behavior
+        incrementButtonGroup = QButtonGroup()
+        incrementButtonGroup.addButton(self.button_1)
+        incrementButtonGroup.addButton(self.button_01)
+        incrementButtonGroup.addButton(self.button_001)
+        incrementButtonGroup.setExclusive(True)
+        self.button_1.setCheckable(True)
+        self.button_01.setCheckable(True)
+        self.button_001.setCheckable(True)
+        # default selection is the "1" button
+        self.button_1.setChecked(True)
+
+        # X buttons
+        self.button_x_left = QPushButton(chr(27))
+        self.button_x_left.setFixedSize(60,60)
+        self.button_x_right = QPushButton(chr(26))
+        self.button_x_right.setFixedSize(60,60)
+        # X button actions
+        #self.button_x_left.clicked.connect(self.buttonClicked('x_left'))
+        #self.button_x_right.clicked.connect(self.buttonClicked('x_right'))
+
+        # Y buttons
+        self.button_y_left = QPushButton(chr(27))
+        self.button_y_left.setFixedSize(60,60)
+        self.button_y_right = QPushButton(chr(26))
+        self.button_y_right.setFixedSize(60,60)
+        # Y button actions
+        #self.button_y_left.clicked.connect(self.buttonClicked('y_left'))
+        #self.button_y_right.clicked.connect(self.buttonClicked('y_right'))
+
+        # Z buttons
+        self.button_z_down = QPushButton(chr(25))
+        self.button_z_down.setFixedSize(60,60)
+        self.button_z_up = QPushButton(chr(24))
+        self.button_z_up.setFixedSize(60,60)
+        # Z button actions
+        #self.button_z_down.clicked.connect(self.buttonClicked('z_down'))
+        #self.button_z_up.clicked.connect(self.buttonClicked('z_up'))
+
+        # create on-screen labels
         x_label = QLabel('X')
-        buttons_layout.addWidget(x_label,0,0)
-        buttons_layout.addWidget(self.button_x1,0,1)
-        buttons_layout.addWidget(self.button_x2,0,2)
-        buttons_layout.addWidget(self.button_x3,0,3)
-        buttons_layout.addWidget(self.button_x4,0,4)
-        buttons_layout.addWidget(self.button_x5,0,5)
-        buttons_layout.addWidget(self.button_x6,0,6)
-
-        # Y
-        self.button_y1 = QPushButton('-1')
-        self.button_y2 = QPushButton('-0.1')
-        self.button_y3 = QPushButton('-0.01')
-        self.button_y4 = QPushButton('+0.01')
-        self.button_y5 = QPushButton('+0.1')
-        self.button_y6 = QPushButton('+1')
-        # set X sizes
-        self.button_y1.setFixedSize(60,60)
-        self.button_y2.setFixedSize(60,60)
-        self.button_y3.setFixedSize(60,60)
-        self.button_y4.setFixedSize(60,60)
-        self.button_y5.setFixedSize(60,60)
-        self.button_y6.setFixedSize(60,60)
-        # attach actions
-        self.button_y1.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y-1 G90'))
-        self.button_y2.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y-0.1 G90'))
-        self.button_y3.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y-0.01 G90'))
-        self.button_y4.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y0.01 G90'))
-        self.button_y5.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y0.1 G90'))
-        self.button_y6.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y1 G90'))
-        # add buttons to window
         y_label = QLabel('Y')
-        buttons_layout.addWidget(y_label,1,0)
-        buttons_layout.addWidget(self.button_y1,1,1)
-        buttons_layout.addWidget(self.button_y2,1,2)
-        buttons_layout.addWidget(self.button_y3,1,3)
-        buttons_layout.addWidget(self.button_y4,1,4)
-        buttons_layout.addWidget(self.button_y5,1,5)
-        buttons_layout.addWidget(self.button_y6,1,6)
-
-        # Z
-        self.button_z1 = QPushButton('-1')
-        self.button_z2 = QPushButton('-0.1')
-        self.button_z3 = QPushButton('-0.01')
-        self.button_z4 = QPushButton('+0.01')
-        self.button_z5 = QPushButton('+0.1')
-        self.button_z6 = QPushButton('+1')
-        # set X sizes
-        self.button_z1.setFixedSize(60,60) 
-        self.button_z2.setFixedSize(60,60)
-        self.button_z3.setFixedSize(60,60)
-        self.button_z4.setFixedSize(60,60)
-        self.button_z5.setFixedSize(60,60)
-        self.button_z6.setFixedSize(60,60)
-        # attach actions
-        self.button_z1.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z-1 G90'))
-        self.button_z2.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z-0.1 G90'))
-        self.button_z3.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z-0.01 G90'))
-        self.button_z4.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z0.01 G90'))
-        self.button_z5.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z0.1 G90'))
-        self.button_z6.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z1 G90'))
-        # add buttons to window
         z_label = QLabel('Z')
-        buttons_layout.addWidget(z_label,2,0)
-        buttons_layout.addWidget(self.button_z1,2,1)
-        buttons_layout.addWidget(self.button_z2,2,2)
-        buttons_layout.addWidget(self.button_z3,2,3)
-        buttons_layout.addWidget(self.button_z4,2,4)
-        buttons_layout.addWidget(self.button_z5,2,5)
-        buttons_layout.addWidget(self.button_z6,2,6)
 
-        #self.macro_field = QLineEdit()
-        #self.button_macro = QPushButton('Run macro')
-        #buttons_layout.addWidget(self.button_macro,3,1,2,1)
-        #buttons_layout.addWidget(self.macro_field,3,2,1,-1)
+        # GRAPHIC ELEMENTS
+        # add all labels to window layout
+        buttons_layout.addWidget(x_label,1,0)
+        buttons_layout.addWidget(y_label,2,0)
+        buttons_layout.addWidget(z_label,3,0)
+        # add increment buttons
+        buttons_layout.addWidget(self.button_001,0,0)
+        buttons_layout.addWidget(self.button_01,0,1)
+        buttons_layout.addWidget(self.button_1,0,2)
+        # add X movement buttons
+        buttons_layout.addWidget(self.button_x_left,1,1)
+        buttons_layout.addWidget(self.button_x_right,1,2)
+        # add Y movement buttons
+        buttons_layout.addWidget(self.button_y_left,2,1)
+        buttons_layout.addWidget(self.button_y_right,2,2)
+        # add Z movement buttons
+        buttons_layout.addWidget(self.button_z_down,3,1)
+        buttons_layout.addWidget(self.button_z_up,3,2)
 
+        if False:
+            # X
+            self.button_x1 = QPushButton('-1')
+            self.button_x2 = QPushButton('-0.1')
+            self.button_x3 = QPushButton('-0.01')
+            self.button_x4 = QPushButton('+0.01')
+            self.button_x5 = QPushButton('+0.1')
+            self.button_x6 = QPushButton('+1')
+            # set X sizes
+            self.button_x1.setFixedSize(60,60) 
+            self.button_x2.setFixedSize(60,60)
+            self.button_x3.setFixedSize(60,60)
+            self.button_x4.setFixedSize(60,60)
+            self.button_x5.setFixedSize(60,60)
+            self.button_x6.setFixedSize(60,60)
+            # attach actions
+            self.button_x1.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X-1 G90'))
+            self.button_x2.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X-0.1 G90'))
+            self.button_x3.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X-0.01 G90'))
+            self.button_x4.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X0.01 G90'))
+            self.button_x5.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X0.1 G90'))
+            self.button_x6.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 X1 G90'))
+            # add buttons to window
+            x_label = QLabel('X')
+            buttons_layout.addWidget(x_label,0,0)
+            buttons_layout.addWidget(self.button_x1,0,1)
+            buttons_layout.addWidget(self.button_x2,0,2)
+            buttons_layout.addWidget(self.button_x3,0,3)
+            buttons_layout.addWidget(self.button_x4,0,4)
+            buttons_layout.addWidget(self.button_x5,0,5)
+            buttons_layout.addWidget(self.button_x6,0,6)
+
+            # Y
+            self.button_y1 = QPushButton('-1')
+            self.button_y2 = QPushButton('-0.1')
+            self.button_y3 = QPushButton('-0.01')
+            self.button_y4 = QPushButton('+0.01')
+            self.button_y5 = QPushButton('+0.1')
+            self.button_y6 = QPushButton('+1')
+            # set X sizes
+            self.button_y1.setFixedSize(60,60)
+            self.button_y2.setFixedSize(60,60)
+            self.button_y3.setFixedSize(60,60)
+            self.button_y4.setFixedSize(60,60)
+            self.button_y5.setFixedSize(60,60)
+            self.button_y6.setFixedSize(60,60)
+            # attach actions
+            self.button_y1.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y-1 G90'))
+            self.button_y2.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y-0.1 G90'))
+            self.button_y3.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y-0.01 G90'))
+            self.button_y4.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y0.01 G90'))
+            self.button_y5.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y0.1 G90'))
+            self.button_y6.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Y1 G90'))
+            # add buttons to window
+            y_label = QLabel('Y')
+            buttons_layout.addWidget(y_label,1,0)
+            buttons_layout.addWidget(self.button_y1,1,1)
+            buttons_layout.addWidget(self.button_y2,1,2)
+            buttons_layout.addWidget(self.button_y3,1,3)
+            buttons_layout.addWidget(self.button_y4,1,4)
+            buttons_layout.addWidget(self.button_y5,1,5)
+            buttons_layout.addWidget(self.button_y6,1,6)
+
+            # Z
+            self.button_z1 = QPushButton('-1')
+            self.button_z2 = QPushButton('-0.1')
+            self.button_z3 = QPushButton('-0.01')
+            self.button_z4 = QPushButton('+0.01')
+            self.button_z5 = QPushButton('+0.1')
+            self.button_z6 = QPushButton('+1')
+            # set X sizes
+            self.button_z1.setFixedSize(60,60) 
+            self.button_z2.setFixedSize(60,60)
+            self.button_z3.setFixedSize(60,60)
+            self.button_z4.setFixedSize(60,60)
+            self.button_z5.setFixedSize(60,60)
+            self.button_z6.setFixedSize(60,60)
+            # attach actions
+            self.button_z1.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z-1 G90'))
+            self.button_z2.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z-0.1 G90'))
+            self.button_z3.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z-0.01 G90'))
+            self.button_z4.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z0.01 G90'))
+            self.button_z5.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z0.1 G90'))
+            self.button_z6.clicked.connect(lambda: self.parent().printer.gCode('G91 G1 Z1 G90'))
+            # add buttons to window
+            z_label = QLabel('Z')
+            buttons_layout.addWidget(z_label,2,0)
+            buttons_layout.addWidget(self.button_z1,2,1)
+            buttons_layout.addWidget(self.button_z2,2,2)
+            buttons_layout.addWidget(self.button_z3,2,3)
+            buttons_layout.addWidget(self.button_z4,2,4)
+            buttons_layout.addWidget(self.button_z5,2,5)
+            buttons_layout.addWidget(self.button_z6,2,6)
+
+            #self.macro_field = QLineEdit()
+            #self.button_macro = QPushButton('Run macro')
+            #buttons_layout.addWidget(self.button_macro,3,1,2,1)
+            #buttons_layout.addWidget(self.macro_field,3,2,1,-1)
 
         # Set up items on dialog grid
         self.layout.addWidget(self.cp_info,0,0,1,-1)
@@ -206,6 +276,30 @@ class CPDialog(QDialog):
                 
         # apply layout
         self.setLayout(self.layout)
+
+    def buttonClicked(self, buttonName):
+        increment_amount = 1
+        # fetch current increment value
+        if self.button_1.isChecked():
+            increment_amount = 1
+        elif self.button_01.isChecked():
+            increment_amount = 0.1
+        elif self.button_001.isChecked():
+            increment_amount = 0.01
+        # Call corresponding axis gcode command
+        if buttonName == 'x_left':
+            self.parent().printer.gCode('G91 G1 -X' + str(increment_amount) + ' G90')
+        elif buttonName == 'x_right':
+            self.parent().printer.gCode('G91 G1 X' + str(increment_amount) + ' G90')
+        elif buttonName == 'y_left':
+            self.parent().printer.gCode('G91 G1 -Y' + str(increment_amount) + ' G90')
+        elif buttonName == 'y_right':
+            self.parent().printer.gCode('G91 G1 Y' + str(increment_amount) + ' G90')
+        elif buttonName == 'z_down':
+            self.parent().printer.gCode('G91 G1 -Z' + str(increment_amount) + ' G90')
+        elif buttonName == 'z_up':
+            self.parent().printer.gCode('G91 G1 Z' + str(increment_amount) + ' G90')
+        return
 
     def setSummaryText(self, message):
         self.cp_info.setText(message)
