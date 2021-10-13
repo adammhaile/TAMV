@@ -1545,7 +1545,10 @@ class App(QMainWindow):
 
         # Instruction box
         self.instructions_layout = QGridLayout()
-        self.instructions_layout.setSpacing(1)
+        self.instructions_layout.setSpacing(0)
+        self.instructions_layout.setContentsMargins(0,0,0,0)
+        self.instructions_layout.setColumnMinimumWidth(0,180)
+        self.instructions_layout.setColumnStretch(0,0)
 
         self.instructions_box = QGroupBox('Instructions')
         self.instructions_box.setObjectName('instructions_box')
@@ -2141,8 +2144,7 @@ class App(QMainWindow):
         self.cp_label.setStyleSheet(style_red)
 
         # Update instructions box
-        self.instructions_text.setText('Hello world. Scoot your endstop into frame and let\'s boogie.')
-        self.instructions_text.setStyleSheet('background-color: red; color: white')
+        self.instructions_text.setText('Place endstop near center of preview window, and set your controlled point.')
 
     def callTool(self):
         self.manual_button.setDisabled(False)
