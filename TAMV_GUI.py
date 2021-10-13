@@ -1689,22 +1689,25 @@ class App(QMainWindow):
         self.updateStatusbar('Current profile saved to settings.json')
 
     def _createMenuBar(self):
-        menuBar = self.menuBar()
-        # Creating menus using a QMenu object
-        fileMenu = QMenu('&File', self)
-        menuBar.addMenu(fileMenu)
-        fileMenu.addAction(self.debugAction)
-        fileMenu.addAction(self.cameraAction)
-        fileMenu.addSeparator()
-        fileMenu.addAction(self.saveAction)
-        fileMenu.addSeparator()
-        fileMenu.addAction(self.quitAction)
+        # Issue #25: fullscreen mode menu error: can't disable items
+        if not self.small_display:
+            menuBar = self.menuBar()
+            # Creating menus using a QMenu object
+            fileMenu = QMenu('&File', self)
+            menuBar.addMenu(fileMenu)
+            fileMenu.addAction(self.debugAction)
+            fileMenu.addAction(self.cameraAction)
+            fileMenu.addSeparator()
+            fileMenu.addAction(self.saveAction)
+            fileMenu.addSeparator()
+            fileMenu.addAction(self.quitAction)
 
-        self.analysisMenu = QMenu('&Analyze',self)
-        menuBar.addMenu(self.analysisMenu)
-        self.analysisMenu.addAction(self.graphAction)
-        self.analysisMenu.addAction(self.exportAction)
-        self.analysisMenu.setDisabled(True)
+            self.analysisMenu = QMenu('&Analyze',self)
+            menuBar.addMenu(self.analysisMenu)
+            self.analysisMenu.addAction(self.graphAction)
+            self.analysisMenu.addAction(self.exportAction)
+            self.analysisMenu.setDisabled(True)
+            return
 
     def _createActions(self):
         # Creating action using the first constructor
@@ -1929,7 +1932,11 @@ class App(QMainWindow):
         self.disconnection_button.setDisabled(False)
         self.cp_button.setDisabled(False)
         self.jogpanel_button.setDisabled(False)
-        self.analysisMenu.setDisabled(True)
+        
+        # Issue #25: fullscreen mode menu error: can't disable items
+        if not self.small_display:
+            self.analysisMenu.setDisabled(True)
+
         # update connection status indicator to green
         self.connection_status.setStyleSheet(style_green)
         self.cp_label.setStyleSheet(style_red)
@@ -2099,9 +2106,13 @@ class App(QMainWindow):
         self.repeatSpinBox.setDisabled(False)
 
         if len(self.calibrationResults) > 1:
-            self.analysisMenu.setDisabled(False)
+            # Issue #25: fullscreen mode menu error: can't disable items
+            if not self.small_display:
+                self.analysisMenu.setDisabled(False)
         else:
-            self.analysisMenu.setDisabled(True)
+            # Issue #25: fullscreen mode menu error: can't disable items
+            if not self.small_display:
+                self.analysisMenu.setDisabled(True)
 
     def applyCalibration(self):
         # update GUI
