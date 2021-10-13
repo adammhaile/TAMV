@@ -92,7 +92,7 @@ class CPDialog(QDialog):
         self.buttonBox.rejected.connect(self.reject)
 
         self.layout = QGridLayout()
-        self.layout.setSpacing(3)
+        self.layout.setSpacing(1)
         # add information panel
         self.cp_info = QLabel(summary)
         # add jogging grid
@@ -124,8 +124,8 @@ class CPDialog(QDialog):
         self.button_x_right = QPushButton('>>')
         self.button_x_right.setFixedSize(60,60)
         # X button actions
-        #self.button_x_left.clicked.connect(self.buttonClicked('x_left'))
-        #self.button_x_right.clicked.connect(self.buttonClicked('x_right'))
+        self.button_x_left.clicked.connect(self.buttonClicked('x_left'))
+        self.button_x_right.clicked.connect(self.buttonClicked('x_right'))
 
         # Y buttons
         self.button_y_left = QPushButton('<<')
@@ -133,8 +133,8 @@ class CPDialog(QDialog):
         self.button_y_right = QPushButton('>>')
         self.button_y_right.setFixedSize(60,60)
         # Y button actions
-        #self.button_y_left.clicked.connect(self.buttonClicked('y_left'))
-        #self.button_y_right.clicked.connect(self.buttonClicked('y_right'))
+        self.button_y_left.clicked.connect(self.buttonClicked('y_left'))
+        self.button_y_right.clicked.connect(self.buttonClicked('y_right'))
 
         # Z buttons
         self.button_z_down = QPushButton('DOWN')
@@ -142,8 +142,8 @@ class CPDialog(QDialog):
         self.button_z_up = QPushButton('UP')
         self.button_z_up.setFixedSize(60,60)
         # Z button actions
-        #self.button_z_down.clicked.connect(self.buttonClicked('z_down'))
-        #self.button_z_up.clicked.connect(self.buttonClicked('z_up'))
+        self.button_z_down.clicked.connect(self.buttonClicked('z_down'))
+        self.button_z_up.clicked.connect(self.buttonClicked('z_up'))
 
         # create on-screen labels
         x_label = QLabel('X')
