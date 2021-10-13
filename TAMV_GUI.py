@@ -288,15 +288,15 @@ class CPDialog(QDialog):
             increment_amount = 0.01
         # Call corresponding axis gcode command
         if buttonName == 'x_left':
-            self.parent().printer.gCode('G91 G1 -X' + str(increment_amount) + ' G90')
+            self.parent().printer.gCode('G91 G1 X-' + str(increment_amount) + ' G90')
         elif buttonName == 'x_right':
             self.parent().printer.gCode('G91 G1 X' + str(increment_amount) + ' G90')
         elif buttonName == 'y_left':
-            self.parent().printer.gCode('G91 G1 -Y' + str(increment_amount) + ' G90')
+            self.parent().printer.gCode('G91 G1 Y-' + str(increment_amount) + ' G90')
         elif buttonName == 'y_right':
             self.parent().printer.gCode('G91 G1 Y' + str(increment_amount) + ' G90')
         elif buttonName == 'z_down':
-            self.parent().printer.gCode('G91 G1 -Z' + str(increment_amount) + ' G90')
+            self.parent().printer.gCode('G91 G1 Z-' + str(increment_amount) + ' G90')
         elif buttonName == 'z_up':
             self.parent().printer.gCode('G91 G1 Z' + str(increment_amount) + ' G90')
         return
