@@ -77,6 +77,9 @@ style_red = 'background-color: red; color: white;'
 style_disabled = 'background-color: #cccccc; color: #999999; border-style: solid;'
 style_orange = 'background-color: dark-grey; color: orange;'
 
+# debug flags
+debugging_small_display = False
+
 class CPDialog(QDialog):
     def __init__(self,
                 parent=None,
@@ -92,104 +95,30 @@ class CPDialog(QDialog):
         self.buttonBox.rejected.connect(self.reject)
 
         self.layout = QGridLayout()
-        self.layout.setSpacing(1)
+        self.layout.setHorizontalSpacing(1)
+        self.layout.setVerticalSpacing(2)
+        self.layout.setContentsMargins(1,1,1,1)
+
         # add information panel
-        self.cp_info = QLabel(summary)
-        # add jogging grid
-        buttons_layout = QGridLayout()
-
-        # get default system font object
-        panel_font = QFont()
-        panel_font.setPixelSize(40)
-
-        # Increment size buttons
-        self.button_1 = QPushButton('1')
-        self.button_1.setFixedSize(60,60)
-        self.button_01 = QPushButton('0.1')
-        self.button_01.setFixedSize(60,60)
-        self.button_001 = QPushButton('0.01')
-        self.button_001.setFixedSize(60,60)
+        self.cp_info = QLabel(summary+'\n')
+        self.cp_info.setWordWrap(True)
+        self.cp_info.setContentsMargins(10,10,10,1)
         
-        # Create increment buttons group to enable radio-button behavior
-        self.incrementButtonGroup = QButtonGroup()
-        self.incrementButtonGroup.addButton(self.button_1)
-        self.incrementButtonGroup.addButton(self.button_01)
-        self.incrementButtonGroup.addButton(self.button_001)
-        self.incrementButtonGroup.setExclusive(True)
-        self.button_1.setCheckable(True)
-        self.button_01.setCheckable(True)
-        self.button_001.setCheckable(True)
-        # default selection is the "1" button
-        self.button_1.setChecked(True)
+        # create all the buttons
+        self.createJogPanelButtons()
 
-        # X buttons
-        self.button_x_left = QPushButton('<< -', objectName='plus')
-        self.button_x_left.setFixedSize(60,60)
-        self.button_x_right = QPushButton('+ >>', objectName='plus')
-        self.button_x_right.setFixedSize(60,60)
-        # X button actions
-        self.button_x_left.clicked.connect(lambda: self.buttonClicked('x_left'))
-        self.button_x_right.clicked.connect(lambda: self.buttonClicked('x_right'))
-
-        # Y buttons
-        self.button_y_left = QPushButton('<< -', objectName='plus')
-        self.button_y_left.setFixedSize(60,60)
-        self.button_y_right = QPushButton('+ >>', objectName='plus')
-        self.button_y_right.setFixedSize(60,60)
-        # Y button actions
-        self.button_y_left.clicked.connect(lambda: self.buttonClicked('y_left'))
-        self.button_y_right.clicked.connect(lambda: self.buttonClicked('y_right'))
-
-        # Z buttons
-        self.button_z_down = QPushButton('-', objectName='plus')
-        self.button_z_down.setFont(panel_font)
-        self.button_z_down.setFixedSize(60,60)
-        self.button_z_up = QPushButton('+', objectName='plus')
-        self.button_z_up.setFont(panel_font)
-        self.button_z_up.setFixedSize(60,60)
-        # Z button actions
-        self.button_z_down.clicked.connect(lambda: self.buttonClicked('z_down'))
-        self.button_z_up.clicked.connect(lambda: self.buttonClicked('z_up'))
-
-        # create on-screen labels
-        x_label = QLabel('X')
-        y_label = QLabel('Y')
-        z_label = QLabel('Z')
-
-        # GRAPHIC ELEMENTS
-        # add all labels to window layout
-        buttons_layout.addWidget(x_label,1,0)
-        buttons_layout.addWidget(y_label,2,0)
-        buttons_layout.addWidget(z_label,3,0)
-        # add increment buttons
-        buttons_layout.addWidget(self.button_001,0,0)
-        buttons_layout.addWidget(self.button_01,0,1)
-        buttons_layout.addWidget(self.button_1,0,2)
-        # add X movement buttons
-        buttons_layout.addWidget(self.button_x_left,1,1)
-        buttons_layout.addWidget(self.button_x_right,1,2)
-        # add Y movement buttons
-        buttons_layout.addWidget(self.button_y_left,2,1)
-        buttons_layout.addWidget(self.button_y_right,2,2)
-        # add Z movement buttons
-        buttons_layout.addWidget(self.button_z_down,3,1)
-        buttons_layout.addWidget(self.button_z_up,3,2)
-
-        #self.macro_field = QLineEdit()
-        #self.button_macro = QPushButton('Run macro')
-        #buttons_layout.addWidget(self.button_macro,3,1,2,1)
-        #buttons_layout.addWidget(self.macro_field,3,2,1,-1)
-
+        # GUI management
         # Set up items on dialog grid
-        self.layout.addWidget(self.cp_info,0,0,1,-1)
-        self.layout.addLayout(buttons_layout,1,0,3,7)
+        # Summary text
+        self.layout.addWidget(self.cp_info,0,0,1,1, Qt.AlignCenter | Qt.AlignVCenter)
+        # Jog Panel buttons
+        self.layout.addWidget(self.panel_box, 1,0,1,1, Qt.AlignCenter | Qt.AlignVCenter)
         # OK/Cancel buttons
-        self.layout.addWidget(self.buttonBox)
-                
+        self.layout.addWidget(self.buttonBox,2,0,1,-1, Qt.AlignCenter | Qt.AlignVCenter)
         # apply layout
         self.setLayout(self.layout)
 
-    def buttonClicked(self, buttonName):
+    def jogPanelButtonClicked(self, buttonName):
         increment_amount = 1
         # fetch current increment value
         if self.button_1.isChecked():
@@ -212,6 +141,97 @@ class CPDialog(QDialog):
         elif buttonName == 'z_up':
             self.parent().printer.gCode('G91 G1 Z' + str(increment_amount) + ' G90')
         return
+
+    def createJogPanelButtons(self):
+        # add jogging grid
+        self.buttons_layout = QGridLayout()
+        self.buttons_layout.setSpacing(1)
+
+        self.panel_box = QGroupBox('Jog Panel')
+        self.panel_box.setLayout(self.buttons_layout)
+
+        # get default system font object
+        self.panel_font = QFont()
+        self.panel_font.setPixelSize(40)
+        # set button sizing
+        self.button_width = 50
+        self.button_height = 50
+        if self.parent().small_display:
+            self.button_height = 60
+            self.button_width = 60
+        # Increment size buttons
+        self.button_1 = QPushButton('1')
+        self.button_1.setFixedSize(self.button_width,self.button_height)
+        self.button_01 = QPushButton('0.1')
+        self.button_01.setFixedSize(self.button_width,self.button_height)
+        self.button_001 = QPushButton('0.01')
+        self.button_001.setFixedSize(self.button_width,self.button_height)
+
+        # Create increment buttons group to enable radio-button behavior
+        self.incrementButtonGroup = QButtonGroup()
+        self.incrementButtonGroup.addButton(self.button_1)
+        self.incrementButtonGroup.addButton(self.button_01)
+        self.incrementButtonGroup.addButton(self.button_001)
+        self.incrementButtonGroup.setExclusive(True)
+        self.button_1.setCheckable(True)
+        self.button_01.setCheckable(True)
+        self.button_001.setCheckable(True)
+        # default selection is the "1" button
+        self.button_1.setChecked(True)
+        # X buttons
+        self.button_x_left = QPushButton('-', objectName='plus')
+        self.button_x_left.setFixedSize(self.button_width,self.button_height)
+        self.button_x_right = QPushButton('+', objectName='plus')
+        self.button_x_right.setFixedSize(self.button_width,self.button_height)
+        # X button actions
+        self.button_x_left.clicked.connect(lambda: self.jogPanelButtonClicked('x_left'))
+        self.button_x_right.clicked.connect(lambda: self.jogPanelButtonClicked('x_right'))
+
+        # Y buttons
+        self.button_y_left = QPushButton('-', objectName='plus')
+        self.button_y_left.setFixedSize(self.button_width,self.button_height)
+        self.button_y_right = QPushButton('+', objectName='plus')
+        self.button_y_right.setFixedSize(self.button_width,self.button_height)
+        # Y button actions
+        self.button_y_left.clicked.connect(lambda: self.jogPanelButtonClicked('y_left'))
+        self.button_y_right.clicked.connect(lambda: self.jogPanelButtonClicked('y_right'))
+
+        # Z buttons
+        self.button_z_down = QPushButton('-', objectName='plus')
+        self.button_z_down.setFont(self.panel_font)
+        self.button_z_down.setFixedSize(self.button_width,self.button_height)
+        self.button_z_up = QPushButton('+', objectName='plus')
+        self.button_z_up.setFont(self.panel_font)
+        self.button_z_up.setFixedSize(self.button_width,self.button_height)
+        # Z button actions
+        self.button_z_down.clicked.connect(lambda: self.jogPanelButtonClicked('z_down'))
+        self.button_z_up.clicked.connect(lambda: self.jogPanelButtonClicked('z_up'))
+
+        # create on-screen labels
+        self.x_label = QLabel('X')
+        self.x_label.setAlignment(Qt.AlignCenter |Qt.AlignVCenter)
+        self.y_label = QLabel('Y')
+        self.y_label.setAlignment(Qt.AlignCenter |Qt.AlignVCenter)
+        self.z_label = QLabel('Z')
+        self.z_label.setAlignment(Qt.AlignCenter |Qt.AlignVCenter)
+
+         # add all labels to button panel layout
+        self.buttons_layout.addWidget(self.x_label,1,0)
+        self.buttons_layout.addWidget(self.y_label,2,0)
+        self.buttons_layout.addWidget(self.z_label,3,0)
+        # add increment buttons
+        self.buttons_layout.addWidget(self.button_001,0,0)
+        self.buttons_layout.addWidget(self.button_01,0,1)
+        self.buttons_layout.addWidget(self.button_1,0,2)
+        # add X movement buttons
+        self.buttons_layout.addWidget(self.button_x_left,1,1)
+        self.buttons_layout.addWidget(self.button_x_right,1,2)
+        # add Y movement buttons
+        self.buttons_layout.addWidget(self.button_y_left,2,1)
+        self.buttons_layout.addWidget(self.button_y_right,2,2)
+        # add Z movement buttons
+        self.buttons_layout.addWidget(self.button_z_down,3,1)
+        self.buttons_layout.addWidget(self.button_z_up,3,2)
 
     def setSummaryText(self, message):
         self.cp_info.setText(message)
@@ -1327,7 +1347,6 @@ class App(QMainWindow):
             app_screen = self.frameGeometry()
         # larger displays - normal window
         else:
-            debugging_small_display = False
             if debugging_small_display:
                 self.small_display = True
                 logger.info('800x600 desktop detected')
@@ -1367,10 +1386,27 @@ class App(QMainWindow):
                 background-color: green;\
                 color: white;\
             }\
-            QPushButton#plus {\
+            QLabel#labelPlus {\
                 font: 20px;\
-                font-weight: bold;\
                 padding: 0px;\
+            }\
+            QPushButton#plus:enabled {\
+                font: 25px;\
+                padding: 0px;\
+                background-color: #eeeeee;\
+                color: #000000;\
+            }\
+            QPushButton#plus:enabled:hover {\
+                font: 25px;\
+                padding: 0px;\
+                background-color: green;\
+                color: #000000;\
+            }\
+            QPushButton#plus:enabled:pressed {\
+                font: 25px;\
+                padding: 0px;\
+                background-color: #FF0000;\
+                color: #222222;\
             }\
             QPushButton#debug,QMessageBox > #debug {\
                 background-color: blue;\
@@ -1478,12 +1514,6 @@ class App(QMainWindow):
         #self.calibration_button.setStyleSheet(style_disabled)
         self.calibration_button.setDisabled(True)
         self.calibration_button.setFixedWidth(170)
-        # Jog Panel
-        self.jogpanel_button = QPushButton('Jog Panel')
-        self.jogpanel_button.setToolTip('Open a control panel to move carriage.')
-        self.jogpanel_button.clicked.connect(self.displayJogPanel)
-        self.jogpanel_button.setDisabled(True)
-        self.jogpanel_button.setFixedWidth(170)
         # Debug Info
         self.debug_button = QPushButton('Debug Information')
         self.debug_button.setToolTip('Display current debug info for troubleshooting\nand to display final G10 commands')
@@ -1505,22 +1535,6 @@ class App(QMainWindow):
         self.repeatSpinBox.setMinimum(1)
         self.repeatSpinBox.setSingleStep(1)
         self.repeatSpinBox.setDisabled(True)
-        # Offsets table
-        self.offsets_box = QGroupBox("Tool Offsets")
-        self.offsets_box.setMaximumWidth(170)
-        self.offsets_table = QTableWidget()
-        self.offsets_table.setColumnCount(2)
-        self.offsets_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.offsets_table.setColumnWidth(0,50)
-        self.offsets_table.setColumnWidth(1,50)
-        self.offsets_table.setHorizontalHeaderItem(0, QTableWidgetItem("X"))
-        self.offsets_table.setHorizontalHeaderItem(1, QTableWidgetItem("Y"))
-        self.offsets_table.resizeRowsToContents()
-        vbox = QVBoxLayout()
-        vbox.setSpacing(1)
-        self.offsets_box.setLayout(vbox)
-        vbox.addWidget(self.offsets_table)
-        self.offsets_box.setVisible(False)
         # Manual alignment button
         self.manual_button = QPushButton('Manual offset')
         self.manual_button.setToolTip('After jogging tool to the correct position in the window, capture and calculate offset.')
@@ -1554,37 +1568,53 @@ class App(QMainWindow):
         # create a grid box layout
         grid = QGridLayout()
         grid.setSpacing(3)
-        # add elements to grid
-        # FIRST ROW
-        grid.addWidget(self.connection_button,1,1,Qt.AlignLeft)
-        grid.addWidget(self.detect_box,1,2,1,1)
-        grid.addWidget(self.xray_box,1,3,1,1)
-        grid.addWidget(self.loose_box,1,4,1,1)
-        grid.addWidget(self.toolBox,1,5,1,1)
-        grid.addWidget(self.disconnection_button,1,7,1,-1,Qt.AlignLeft)
-        # SECOND ROW
         
-        # THIRD ROW
-        # main image viewer
-        grid.addWidget(self.image_label,3,1,4,6)
-        grid.addWidget(self.jogpanel_button,3,7,1,1)
-        grid.addWidget(self.offsets_box,4,7,1,1)
-        #HBHBHBHB
-        grid.addWidget(self.manual_button,5,7,1,1)
-        if self.small_display:
-            grid.addWidget(self.exit_button,5,7,1,1)
-        grid.addWidget(self.debug_button,6,7,1,1)
-        # FOURTH ROW
-        grid.addWidget(self.cp_button,7,1,1,1)
-        grid.addWidget(self.calibration_button,7,2,1,1)
-        grid.addWidget(self.repeat_label,7,3,1,1)
-        grid.addWidget(self.repeatSpinBox,7,4,1,1)
-
         #HBHBHB: TESTING CP AUTOCALIBRATE
         self.cp_calibration_button = QPushButton('Auto CP')
         self.cp_calibration_button.clicked.connect(self.calibrate_CP)
         self.cp_calibration_button.setDisabled(True)
-        grid.addWidget(self.cp_calibration_button,7,5,1,1)
+        
+        self.createJogPanelButtons()
+        self.panel_box.setDisabled(True)
+
+        ################################################### ELEMENT POSITIONING ###################################################
+        # row, col, rowSpan, colSpan, alignment
+        # connect button
+        grid.addWidget( self.connection_button,     1,  1,  1,  1,  Qt.AlignLeft )
+        # detect checkbox
+        grid.addWidget( self.detect_box,            1,  2,  1,  1,  Qt.AlignLeft )
+        # xray checkbox
+        grid.addWidget( self.xray_box,              1,  3,  1,  1,  Qt.AlignLeft )
+        # loose detection checkbox
+        grid.addWidget( self.loose_box,             1,  4,  1,  1,  Qt.AlignLeft )
+        # disconnect button
+        grid.addWidget( self.disconnection_button,  1,  7,  1,  1, Qt.AlignCenter )
+        ###########################################################################################################################
+        # main image viewer
+        grid.addWidget( self.image_label,           2,  1,  4,  6,  Qt.AlignLeft )
+        # Jog Panel
+        grid.addWidget(self.panel_box,              2,  7,  1,  1,  Qt.AlignCenter | Qt.AlignTop )
+        # tool selection table
+        grid.addWidget( self.toolBox,               3,  7,  1,  1,  Qt.AlignCenter | Qt.AlignTop )
+        # conditional exit button
+        if self.small_display:
+            grid.addWidget( self.exit_button,       4,  7,  1,  1,  Qt.AlignCenter | Qt.AlignBottom )
+        # manual alignment button
+        grid.addWidget( self.manual_button,         5,  7,  1,  1,  Qt.AlignCenter | Qt.AlignBottom )
+        ###########################################################################################################################
+        # set controlled point button
+        grid.addWidget( self.cp_button,             6,  1,  1,  1,  Qt.AlignLeft )
+        # start calibration button
+        grid.addWidget( self.calibration_button,    6,  2,  1,  1,  Qt.AlignLeft )
+        # cycle repeat label
+        grid.addWidget( self.repeat_label,          6,  3,  1,  1,  Qt.AlignLeft )
+        # cycle repeat selector
+        grid.addWidget( self.repeatSpinBox,         6,  4,  1,  1,  Qt.AlignLeft )
+        # CP auto calibration button
+        grid.addWidget( self.cp_calibration_button, 6,  5,  1,  1,  Qt.AlignRight )
+        # debug window button
+        grid.addWidget( self.debug_button,          6,  7,  1,  1,  Qt.AlignCenter | Qt.AlignBottom )
+        ################################################# END ELEMENT POSITIONING #################################################
 
         # set the grid layout as the widgets layout
         self.centralWidget.setLayout(grid)
@@ -1593,6 +1623,124 @@ class App(QMainWindow):
         # flag to draw circle
         self.crosshair = False
         self.crosshair_alignment = False
+
+    def jogPanelButtonClicked(self, buttonName):
+        increment_amount = 1
+        # fetch current increment value
+        if self.button_1.isChecked():
+            increment_amount = 1
+        elif self.button_01.isChecked():
+            increment_amount = 0.1
+        elif self.button_001.isChecked():
+            increment_amount = 0.01
+        # Call corresponding axis gcode command
+        if buttonName == 'x_left':
+            self.printer.gCode('G91 G1 X-' + str(increment_amount) + ' G90')
+        elif buttonName == 'x_right':
+            self.printer.gCode('G91 G1 X' + str(increment_amount) + ' G90')
+        elif buttonName == 'y_left':
+            self.printer.gCode('G91 G1 Y-' + str(increment_amount) + ' G90')
+        elif buttonName == 'y_right':
+            self.printer.gCode('G91 G1 Y' + str(increment_amount) + ' G90')
+        elif buttonName == 'z_down':
+            self.printer.gCode('G91 G1 Z-' + str(increment_amount) + ' G90')
+        elif buttonName == 'z_up':
+            self.printer.gCode('G91 G1 Z' + str(increment_amount) + ' G90')
+        return
+
+    def createJogPanelButtons(self):
+        # add jogging grid
+        self.buttons_layout = QGridLayout()
+        self.buttons_layout.setSpacing(1)
+
+        self.panel_box = QGroupBox('Jog Panel')
+        self.panel_box.setLayout(self.buttons_layout)
+
+        # get default system font object
+        self.panel_font = QFont()
+        self.panel_font.setPixelSize(40)
+        # set button sizing
+        self.button_width = 50
+        self.button_height = 50
+        if self.small_display:
+            self.button_height = 50
+            self.button_width = 50
+        # Increment size buttons
+        self.button_1 = QPushButton('1')
+        self.button_1.setFixedSize(self.button_width,self.button_height)
+        self.button_01 = QPushButton('0.1')
+        self.button_01.setFixedSize(self.button_width,self.button_height)
+        self.button_001 = QPushButton('0.01')
+        self.button_001.setFixedSize(self.button_width,self.button_height)
+
+        # Create increment buttons group to enable radio-button behavior
+        self.incrementButtonGroup = QButtonGroup()
+        self.incrementButtonGroup.addButton(self.button_1)
+        self.incrementButtonGroup.addButton(self.button_01)
+        self.incrementButtonGroup.addButton(self.button_001)
+        self.incrementButtonGroup.setExclusive(True)
+        self.button_1.setCheckable(True)
+        self.button_01.setCheckable(True)
+        self.button_001.setCheckable(True)
+        # default selection is the "1" button
+        self.button_1.setChecked(True)
+        # X buttons
+        self.button_x_left = QPushButton('-', objectName='plus')
+        self.button_x_left.setFixedSize(self.button_width,self.button_height)
+        self.button_x_right = QPushButton('+', objectName='plus')
+        self.button_x_right.setFixedSize(self.button_width,self.button_height)
+        # X button actions
+        self.button_x_left.clicked.connect(lambda: self.jogPanelButtonClicked('x_left'))
+        self.button_x_right.clicked.connect(lambda: self.jogPanelButtonClicked('x_right'))
+
+        # Y buttons
+        self.button_y_left = QPushButton('-', objectName='plus')
+        self.button_y_left.setFixedSize(self.button_width,self.button_height)
+        self.button_y_right = QPushButton('+', objectName='plus')
+        self.button_y_right.setFixedSize(self.button_width,self.button_height)
+        # Y button actions
+        self.button_y_left.clicked.connect(lambda: self.jogPanelButtonClicked('y_left'))
+        self.button_y_right.clicked.connect(lambda: self.jogPanelButtonClicked('y_right'))
+
+        # Z buttons
+        self.button_z_down = QPushButton('-', objectName='plus')
+        self.button_z_down.setFont(self.panel_font)
+        self.button_z_down.setFixedSize(self.button_width,self.button_height)
+        self.button_z_up = QPushButton('+', objectName='plus')
+        self.button_z_up.setFont(self.panel_font)
+        self.button_z_up.setFixedSize(self.button_width,self.button_height)
+        # Z button actions
+        self.button_z_down.clicked.connect(lambda: self.jogPanelButtonClicked('z_down'))
+        self.button_z_up.clicked.connect(lambda: self.jogPanelButtonClicked('z_up'))
+
+        # create on-screen labels
+        self.x_label = QLabel('X')
+        self.x_label.setObjectName('labelPlus')
+        self.x_label.setAlignment(Qt.AlignCenter |Qt.AlignVCenter)
+        self.y_label = QLabel('Y')
+        self.y_label.setObjectName('labelPlus')
+        self.y_label.setAlignment(Qt.AlignCenter |Qt.AlignVCenter)
+        self.z_label = QLabel('Z')
+        self.z_label.setObjectName('labelPlus')
+        self.z_label.setAlignment(Qt.AlignCenter |Qt.AlignVCenter)
+
+         # add all labels to button panel layout
+        self.buttons_layout.addWidget(self.x_label,1,0)
+        self.buttons_layout.addWidget(self.y_label,2,0)
+        self.buttons_layout.addWidget(self.z_label,3,0)
+        # add increment buttons
+        self.buttons_layout.addWidget(self.button_001,0,0)
+        self.buttons_layout.addWidget(self.button_01,0,1)
+        self.buttons_layout.addWidget(self.button_1,0,2)
+        # add X movement buttons
+        self.buttons_layout.addWidget(self.button_x_left,1,1)
+        self.buttons_layout.addWidget(self.button_x_right,1,2)
+        # add Y movement buttons
+        self.buttons_layout.addWidget(self.button_y_left,2,1)
+        self.buttons_layout.addWidget(self.button_y_right,2,2)
+        # add Z movement buttons
+        self.buttons_layout.addWidget(self.button_z_down,3,1)
+        self.buttons_layout.addWidget(self.button_z_up,3,2)
 
     def calibrate_CP(self):
         self.video_thread.align_endstop = True
@@ -1840,8 +1988,7 @@ class App(QMainWindow):
         self.disconnection_button.setDisabled(True)
         self.calibration_button.setDisabled(True)
         self.cp_button.setDisabled(True)
-        self.jogpanel_button.setDisabled(True)
-        self.offsets_box.setVisible(False)
+        self.panel_box.setDisabled(True)
         self.connection_status.setText('Connecting..')
         self.connection_status.setStyleSheet(style_orange)
         self.cp_label.setText('<b>CP:</b> <i>undef</i>')
@@ -1902,24 +2049,12 @@ class App(QMainWindow):
                 self._connected_flag = True
                 self.num_tools = self.printer.getNumTools()
                 self.video_thread.numTools = self.num_tools
-                # UPDATE OFFSET INFORMATION
-                self.offsets_box.setVisible(True)
-                self.offsets_table.setRowCount(self.num_tools)
                 for i in range(self.num_tools):
-                    current_tool = self.printer.getG10ToolOffset(i)
-                    offset_x = "{:.3f}".format(current_tool['X'])
-                    offset_y = "{:.3f}".format(current_tool['Y'])
-                    x_tableitem = QTableWidgetItem(offset_x)
-                    y_tableitem = QTableWidgetItem(offset_y)
-                    x_tableitem.setBackground(QColor(255,255,255,255))
-                    y_tableitem.setBackground(QColor(255,255,255,255))
-                    self.offsets_table.setVerticalHeaderItem(i,QTableWidgetItem('T'+str(i)))
-                    self.offsets_table.setItem(i,0,x_tableitem)
-                    self.offsets_table.setItem(i,1,y_tableitem)
                     # add tool buttons
                     toolButton = QPushButton('T'+str(i))
                     toolButton.setToolTip('Fetch T' + str(i) + ' to current machine position.')
                     self.toolButtons.append(toolButton)
+                # HBHBHBHBHBHB: need to add handling the tool buttons here.
         except Exception as conn1:
             self.updateStatusbar('Cannot connect to: ' + self.printerURL )
             logger.error( 'Duet connection exception: ' + str(conn1))
@@ -1949,7 +2084,7 @@ class App(QMainWindow):
         self.cp_calibration_button.setDisabled(False)
         self.disconnection_button.setDisabled(False)
         self.cp_button.setDisabled(False)
-        self.jogpanel_button.setDisabled(False)
+        self.panel_box.setDisabled(False)
         
         # Issue #25: fullscreen mode menu error: can't disable items
         if not self.small_display:
@@ -2033,7 +2168,7 @@ class App(QMainWindow):
                 except: None
                 # update GUI
                 self.cp_button.setDisabled(True)
-                self.jogpanel_button.setDisabled(False)
+                self.panel_box.setDisabled(False)
                 self.calibration_button.setDisabled(True)
                 self.repeatSpinBox.setDisabled(True)
 
@@ -2045,8 +2180,7 @@ class App(QMainWindow):
         self.disconnection_button.setDisabled(True)
         self.calibration_button.setDisabled(True)
         self.cp_button.setDisabled(True)
-        self.jogpanel_button.setDisabled(True)
-        self.offsets_box.setVisible(False)
+        self.panel_box.setDisabled(True)
         self.connection_status.setText('Disconnected')
         self.connection_status.setStyleSheet(style_red)
         self.cp_label.setText('<b>CP:</b> <i>undef</i>')
@@ -2390,8 +2524,7 @@ class App(QMainWindow):
         self.calibration_button.setDisabled(True)
         self.cp_button.setDisabled(True)
         self.cp_button.setText('Pending..')
-        self.jogpanel_button.setDisabled(True)
-        self.offsets_box.setVisible(False)
+        self.panel_box.setDisabled(True)
         self.connection_status.setText('Disconnecting..')
         self.connection_status.setStyleSheet(style_orange)
         self.cp_label.setText('<b>CP:</b> <i>undef</i>')
@@ -2446,8 +2579,7 @@ class App(QMainWindow):
         self.calibration_button.setDisabled(True)
         self.cp_button.setDisabled(True)
         self.cp_button.setText('Set Controlled Point..')
-        self.jogpanel_button.setDisabled(True)
-        self.offsets_box.setVisible(False)
+        self.panel_box.setDisabled(True)
         self.manual_button.setDisabled(True)
         self.connection_status.setText('Disconnected.')
         self.connection_status.setStyleSheet(style_red)
@@ -2481,7 +2613,7 @@ class App(QMainWindow):
         except: None
         # update GUI
         self.cp_button.setDisabled(True)
-        self.jogpanel_button.setDisabled(False)
+        self.panel_box.setDisabled(True)
         self.calibration_button.setDisabled(True)
         self.xray_box.setDisabled(False)
         self.xray_box.setChecked(False)
