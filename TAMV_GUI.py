@@ -123,18 +123,18 @@ class CPDialog(QDialog):
         self.button_1.setChecked(True)
 
         # X buttons
-        self.button_x_left = QPushButton('<<')
+        self.button_x_left = QPushButton('<< -', objectName='plus')
         self.button_x_left.setFixedSize(60,60)
-        self.button_x_right = QPushButton('>>')
+        self.button_x_right = QPushButton('+ >>', objectName='plus')
         self.button_x_right.setFixedSize(60,60)
         # X button actions
         self.button_x_left.clicked.connect(lambda: self.buttonClicked('x_left'))
         self.button_x_right.clicked.connect(lambda: self.buttonClicked('x_right'))
 
         # Y buttons
-        self.button_y_left = QPushButton('<<')
+        self.button_y_left = QPushButton('<< -', objectName='plus')
         self.button_y_left.setFixedSize(60,60)
-        self.button_y_right = QPushButton('>>')
+        self.button_y_right = QPushButton('+ >>', objectName='plus')
         self.button_y_right.setFixedSize(60,60)
         # Y button actions
         self.button_y_left.clicked.connect(lambda: self.buttonClicked('y_left'))
@@ -1370,6 +1370,7 @@ class App(QMainWindow):
             QPushButton#plus {\
                 font: 20px;\
                 font-weight: bold;\
+                padding: 0px;\
             }\
             QPushButton#debug,QMessageBox > #debug {\
                 background-color: blue;\
