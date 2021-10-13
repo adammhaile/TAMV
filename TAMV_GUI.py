@@ -1552,7 +1552,7 @@ class App(QMainWindow):
 
         self.instructions_box = QGroupBox('Instructions')
         self.instructions_box.setObjectName('instructions_box')
-        self.instructions_box.setContentsMargins(0,0,0,0)
+        self.instructions_box.setContentsMargins(0,20,0,0)
         self.instructions_box.setLayout(self.instructions_layout)
 
         self.instructions_text = QLabel('Welcome to TAMV.<br>Please connect to your printer.')
