@@ -100,15 +100,7 @@ class CPDialog(QDialog):
 
         # get default system font object
         panel_font = QFont()
-        panel_font_size = panel_font.pointSize
-        if panel_font_size < 1:
-            #panel font set in pixels
-            print('Caught pixel size')
-            panel_font_size = panel_font.pixelSize
-            panel_font.setPixelSize(panel_font_size+10)
-        else:
-            print('Caught point size')
-            panel_font.setPointSize(panel_font.pointSize+10)
+        panel_font.setPixelSize(40)
 
         # Increment size buttons
         self.button_1 = QPushButton('1')
