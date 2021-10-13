@@ -1368,6 +1368,9 @@ class App(QMainWindow):
         # Call style sheet handler
         self.createStyles()
 
+        # Set state flags to initial values
+        self.flag_CP_setup = False
+
         # LOAD USER SAVED PARAMETERS OR CREATE DEFAULTS
         self.loadUserParameters()
 
@@ -1408,7 +1411,8 @@ class App(QMainWindow):
         grid.setSpacing(3)
         
         #HBHBHB: TESTING CP AUTOCALIBRATE
-        self.cp_calibration_button = QPushButton('Auto CP')
+        self.cp_calibration_button = QPushButton('Automated capture')
+        self.cp_calibration_button.setFixedWidth(170)
         self.cp_calibration_button.clicked.connect(self.calibrate_CP)
         self.cp_calibration_button.setDisabled(True)
         
@@ -1424,7 +1428,7 @@ class App(QMainWindow):
         # xray checkbox
         grid.addWidget( self.xray_box,              1,  3,  1,  1,  Qt.AlignLeft )
         # loose detection checkbox
-        grid.addWidget( self.loose_box,             1,  4,  1,  1,  Qt.AlignLeft )
+        grid.addWidget( self.loose_box,             1,  4,  1,  -1,  Qt.AlignLeft )
         # disconnect button
         grid.addWidget( self.disconnection_button,  1,  7,  1,  1, Qt.AlignCenter )
         ###########################################################################################################################
@@ -1439,8 +1443,8 @@ class App(QMainWindow):
         # conditional exit button
         if self.small_display:
             grid.addWidget( self.exit_button,       5,  7,  1,  1,  Qt.AlignCenter | Qt.AlignBottom )
-        # manual alignment button
-        grid.addWidget( self.manual_button,         6,  7,  1,  1,  Qt.AlignCenter | Qt.AlignBottom )
+        # debug window button
+        grid.addWidget( self.debug_button,          6,  7,  1,  1,  Qt.AlignCenter | Qt.AlignBottom )
         ###########################################################################################################################
         # set controlled point button
         grid.addWidget( self.cp_button,             7,  1,  1,  1,  Qt.AlignLeft )
@@ -1451,9 +1455,9 @@ class App(QMainWindow):
         # cycle repeat selector
         grid.addWidget( self.repeatSpinBox,         7,  4,  1,  1,  Qt.AlignLeft )
         # CP auto calibration button
-        grid.addWidget( self.cp_calibration_button, 7,  5,  1,  1,  Qt.AlignRight )
-        # debug window button
-        grid.addWidget( self.debug_button,          7,  7,  1,  1,  Qt.AlignCenter | Qt.AlignBottom )
+        grid.addWidget( self.cp_calibration_button, 7,  7,  1,  1,  Qt.AlignRight )
+        # manual alignment button
+        grid.addWidget( self.manual_button,         7,  6,  1,  1,  Qt.AlignLeft )
         ################################################# END ELEMENT POSITIONING #################################################
 
         # set the grid layout as the widgets layout
@@ -1480,7 +1484,7 @@ class App(QMainWindow):
         # Controlled point
         self.cp_button = QPushButton('Set Controlled Point..')
         self.cp_button.setToolTip('Define your origin point\nto calculate all tool offsets from.')
-        self.cp_button.clicked.connect(self.controlledPoint)
+        self.cp_button.clicked.connect(self.setupControlledPoint)
         self.cp_button.setFixedWidth(170)
         #self.cp_button.setStyleSheet(style_disabled)
         self.cp_button.setDisabled(True)
@@ -1513,9 +1517,9 @@ class App(QMainWindow):
         self.repeatSpinBox.setSingleStep(1)
         self.repeatSpinBox.setDisabled(True)
         # Manual alignment button
-        self.manual_button = QPushButton('Manual offset')
+        self.manual_button = QPushButton('Capture')
         self.manual_button.setToolTip('After jogging tool to the correct position in the window, capture and calculate offset.')
-        self.manual_button.clicked.connect(self.manualOffset)
+        self.manual_button.clicked.connect(self.captureOffset)
         self.manual_button.setDisabled(True)
         self.manual_button.setFixedWidth(170)
         # Tool buttons table
@@ -1542,6 +1546,7 @@ class App(QMainWindow):
         self.detect_box = QCheckBox('Detect ON')
         self.detect_box.setChecked(False)
         self.detect_box.stateChanged.connect(self.toggle_detect)
+        self.detect_box.setDisabled(True)
 
         # Instruction box
         self.instructions_layout = QGridLayout()
@@ -1800,6 +1805,7 @@ class App(QMainWindow):
     def toggle_detect(self):
         self.video_thread.display_crosshair = not self.video_thread.display_crosshair
         self.video_thread.detection_on = not self.video_thread.detection_on
+        self.crosshair_alignment = not self.crosshair_alignment
         if self.video_thread.detection_on:
             self.xray_box.setDisabled(False)
             self.xray_box.setVisible(True)
@@ -1968,30 +1974,40 @@ class App(QMainWindow):
         self.crosshair_alignment = False
 
     # Manual offset capture
-    def manualOffset(self):
-        self.crosshair_alignment = True
-        try:
-            logger.debug('Manual offset calculation starting..')
-            currentPosition = self.printer.getCoords()
-            curr_x = currentPosition['X']
-            curr_y = currentPosition['Y']
-            # Get active tool
-            _active = int(self.printer.getCurrentTool())
-            #get tool offsets
-            self.tool_offsets = self.printer.getG10ToolOffset(_active)
-            # calculate X and Y coordinates
-            final_x = np.around( (self.cp_coords['X'] + self.tool_offsets['X']) - curr_x, 3 )
-            final_y = np.around( (self.cp_coords['Y'] + self.tool_offsets['Y']) - curr_y, 3 )
-            offsetString  = 'G10 P' + str(_active) + ' X' + str(final_x) + ' Y' + str(final_y)
-            logger.info(offsetString)
-            self.printer.gCode(offsetString)
-        except Exception as e2:
-            self.statusBar.showMessage('Error in manual capture.')
-            logger.error('Error in manual capture: ' + str(e2))
-        logger.debug('Manual offset calculation ending..')
-        self.toolButtons[_active].setObjectName('completed')
-        self.toolButtons[_active].setStyle(self.toolButtons[_active].style())
+    def captureOffset(self):
+        # Check if performing CP setup
+        if self.flag_CP_setup:
+            try:
+                self.captureControlPoint()
+            except Exception as e2:
+                logger.error('Unhandled exception in manual CP setup: ' + str(e2))
+                self.statusBar.showMessage('Error in CP manual capture. Check logs.')
+                return
+        else:
+            # tool capture
+            try:
+                logger.debug('Manual offset calculation starting..')
+                currentPosition = self.printer.getCoords()
+                curr_x = currentPosition['X']
+                curr_y = currentPosition['Y']
+                # Get active tool
+                _active = int(self.printer.getCurrentTool())
+                #get tool offsets
+                self.tool_offsets = self.printer.getG10ToolOffset(_active)
+                # calculate X and Y coordinates
+                final_x = np.around( (self.cp_coords['X'] + self.tool_offsets['X']) - curr_x, 3 )
+                final_y = np.around( (self.cp_coords['Y'] + self.tool_offsets['Y']) - curr_y, 3 )
+                offsetString  = 'G10 P' + str(_active) + ' X' + str(final_x) + ' Y' + str(final_y)
+                logger.info(offsetString)
+                self.printer.gCode(offsetString)
+            except Exception as e2:
+                self.statusBar.showMessage('Error in manual capture.')
+                logger.error('Error in manual capture: ' + str(e2))
+            logger.debug('Manual offset calculation ending..')
+            self.toolButtons[_active].setObjectName('completed')
+            self.toolButtons[_active].setStyle(self.toolButtons[_active].style())
         self.crosshair_alignment = False
+        return
 
     def startVideo(self):
         # create the video capture thread
@@ -2130,7 +2146,7 @@ class App(QMainWindow):
         # enable/disable buttons
         self.connection_button.setDisabled(True)
         self.calibration_button.setDisabled(True)
-        self.cp_calibration_button.setDisabled(False)
+        self.cp_calibration_button.setDisabled(True)
         self.disconnection_button.setDisabled(False)
         self.cp_button.setDisabled(False)
         self.panel_box.setDisabled(False)
@@ -2241,7 +2257,7 @@ class App(QMainWindow):
         if not self.small_display:
             self.analysisMenu.setDisabled(True)
         self.detect_box.setChecked(False)
-        self.detect_box.setDisabled(False)
+        self.detect_box.setDisabled(True)
         self.xray_box.setDisabled(True)
         self.xray_box.setChecked(False)
         self.xray_box.setVisible(False)
@@ -2263,7 +2279,14 @@ class App(QMainWindow):
         self.toolButtons = []
         self.repaint()
 
-    def controlledPoint(self):
+    def disableButtonsCP(self):
+        for item in self.toolButtons:
+            item.setDisabled(True)
+        self.cp_button.setDisabled(True)
+
+    def setupControlledPoint(self):
+        # disable buttons for CP capture run
+        self.disableButtonsCP()
         # handle scenario where machine is busy and user tries to select a tool.
         if not self.printer.isIdle():
             self.updateStatusbar('Machine is not idle, cannot select tool.')
@@ -2275,16 +2298,35 @@ class App(QMainWindow):
         if len(self.cp_coords) > 0:
             self.printer.gCode('T-1')
             self.printer.gCode('G90 G1 X'+ str(self.cp_coords['X']) + ' Y' + str(self.cp_coords['Y']) + ' Z' + str(self.cp_coords['Z']) )
-        dlg = CPDialog(parent=self)
-        if dlg.exec_():
-            self.cp_coords = self.printer.getCoords()
-            self.cp_string = '(' + str(self.cp_coords['X']) + ', ' + str(self.cp_coords['Y']) + ')'
-            self.readyToCalibrate()
-        else:
-            self.statusBar.showMessage('CP Setup cancelled.')
+        #dlg = CPDialog(parent=self)
+        #HBHBHB 123
+        # Enable automated button
+        self.cp_calibration_button.setDisabled(False)
+        # Enable capture button
+        self.manual_button.setDisabled(False)
+        # Update instructions box
+        self.instructions_text.setText('To auto-align, click \"Automated Capture\". Otherwise, use jog panel to center on crosshair and then click Capture.')
+        # wait for user to conclude with state flag
+        self.flag_CP_setup = True
+        return
+    
+    def captureControlPoint(self):
+        # reset state flag
+        self.flag_CP_setup = False
+        # When user confirms everything is done, capture CP values and store
+        self.cp_coords = self.printer.getCoords()
+        self.cp_string = '(' + str(self.cp_coords['X']) + ', ' + str(self.cp_coords['Y']) + ')'
+        # Disable crosshair
         self.crosshair = False
+        # Setup GUI for next step
+        self.readyToCalibrate()
+        # Move printer to CP to prepare for next step
+        self.printer.gCode('G90 G1 X' + str(self.cp_coords['X']) + ' Y' + str(self.cp_coords['Y']))
 
     def readyToCalibrate(self):
+        for item in self.toolButtons:
+            item.setDisabled(False)
+        self.manual_button.setDisabled(True)
         self.statusBar.showMessage('Controlled Point coordinates saved.',3000)
         self.image_label.setText('Controlled Point set. Click \"Start Tool Alignment\" to calibrate..')
         self.cp_button.setText('Reset CP ')
@@ -2305,7 +2347,7 @@ class App(QMainWindow):
         self.video_thread.alignment = False
         self.calibration_button.setDisabled(False)
         self.cp_button.setDisabled(False)
-        self.cp_calibration_button.setDisabled(False)
+        self.cp_calibration_button.setDisabled(True)
 
         self.tool_box.setVisible(True)
         self.repeatSpinBox.setDisabled(False)
