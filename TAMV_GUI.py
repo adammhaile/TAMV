@@ -107,11 +107,11 @@ class CPDialog(QDialog):
         self.button_001.setFixedSize(60,60)
         
         # Create increment buttons group to enable radio-button behavior
-        incrementButtonGroup = QButtonGroup()
-        incrementButtonGroup.addButton(self.button_1)
-        incrementButtonGroup.addButton(self.button_01)
-        incrementButtonGroup.addButton(self.button_001)
-        incrementButtonGroup.setExclusive(True)
+        self.incrementButtonGroup = QButtonGroup()
+        self.incrementButtonGroup.addButton(self.button_1)
+        self.incrementButtonGroup.addButton(self.button_01)
+        self.incrementButtonGroup.addButton(self.button_001)
+        self.incrementButtonGroup.setExclusive(True)
         self.button_1.setCheckable(True)
         self.button_01.setCheckable(True)
         self.button_001.setCheckable(True)
@@ -119,27 +119,27 @@ class CPDialog(QDialog):
         self.button_1.setChecked(True)
 
         # X buttons
-        self.button_x_left = QPushButton(chr(27))
+        self.button_x_left = QPushButton('<<')
         self.button_x_left.setFixedSize(60,60)
-        self.button_x_right = QPushButton(chr(26))
+        self.button_x_right = QPushButton('>>')
         self.button_x_right.setFixedSize(60,60)
         # X button actions
         #self.button_x_left.clicked.connect(self.buttonClicked('x_left'))
         #self.button_x_right.clicked.connect(self.buttonClicked('x_right'))
 
         # Y buttons
-        self.button_y_left = QPushButton(chr(27))
+        self.button_y_left = QPushButton('<<')
         self.button_y_left.setFixedSize(60,60)
-        self.button_y_right = QPushButton(chr(26))
+        self.button_y_right = QPushButton('>>')
         self.button_y_right.setFixedSize(60,60)
         # Y button actions
         #self.button_y_left.clicked.connect(self.buttonClicked('y_left'))
         #self.button_y_right.clicked.connect(self.buttonClicked('y_right'))
 
         # Z buttons
-        self.button_z_down = QPushButton(chr(25))
+        self.button_z_down = QPushButton('DOWN')
         self.button_z_down.setFixedSize(60,60)
-        self.button_z_up = QPushButton(chr(24))
+        self.button_z_up = QPushButton('UP')
         self.button_z_up.setFixedSize(60,60)
         # Z button actions
         #self.button_z_down.clicked.connect(self.buttonClicked('z_down'))
