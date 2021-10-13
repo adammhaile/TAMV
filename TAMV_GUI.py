@@ -1369,6 +1369,7 @@ class App(QMainWindow):
             }\
             QPushButton#plus {\
                 font: 20px;\
+                font-weight: bold;\
             }\
             QPushButton#debug,QMessageBox > #debug {\
                 background-color: blue;\
