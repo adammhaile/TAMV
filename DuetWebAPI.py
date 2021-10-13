@@ -51,7 +51,7 @@ class DuetWebAPI:
                 self._rrf2 = True
                 logger.warning('unknown board+RRF combo - defaulting to RRF2')
             self.pt = 2
-            logger.info('Connected to: '+ firmwareName + '- V'+firmwareVersion)
+            logger.info('Connected to '+ firmwareName + '- V'+firmwareVersion)
             return
         except:
             try:

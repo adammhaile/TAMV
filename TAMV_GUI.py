@@ -1458,6 +1458,14 @@ class App(QMainWindow):
             QInputDialog QDialogButtonBox > QPushButton:hover:!pressed, QDialog QPushButton:hover:!pressed {\
                 background-color: #27ae60;\
             }\
+            QPushButton#calibrating:enabled {\
+                background-color: blue;\
+                color: white;\
+            }\
+            QPushButton#completed:enabled {\
+                background-color: orange;\
+                color: white;\
+            }\
             '
         )
         # LOAD USER SAVED PARAMETERS OR CREATE DEFAULTS
@@ -1943,6 +1951,11 @@ class App(QMainWindow):
             self.statusBar.showMessage('Error in manual capture.')
             logger.error('Error in manual capture: ' + str(e2))
         logger.debug('Manual offset calculation ending..')
+        #self.toolBox.itemAt(_active).setObjectName('completed')
+        self.toolButtons[_active].setObjectName('calibrating')
+        self.toolBox.repaint()
+        for item in self.toolBox.findChildren(QPushButton):
+            print(item.objectName())
         self.crosshair_alignment = False
 
     def startVideo(self):
@@ -2053,6 +2066,7 @@ class App(QMainWindow):
                     # add tool buttons
                     toolButton = QPushButton('T'+str(i))
                     toolButton.setToolTip('Fetch T' + str(i) + ' to current machine position.')
+                    toolButton.setObjectName('tool')
                     self.toolButtons.append(toolButton)
                 # HBHBHBHBHBHB: need to add handling the tool buttons here.
         except Exception as conn1:
