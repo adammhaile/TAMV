@@ -47,6 +47,10 @@ class DuetWebAPI:
                 firmwareVersion = j['firmwareVersion']
                 if firmwareVersion[0] == "2":
                     self._rrf2 = True
+                else: 
+                    self._rrf2 = False
+                    self.pt = 2
+                    return
             except Exception as e:
                 self._rrf2 = True
                 logger.warning('unknown board+RRF combo - defaulting to RRF2')
