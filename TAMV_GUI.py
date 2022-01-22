@@ -1002,11 +1002,12 @@ class CalibrateNozzles(QThread):
         self.calibration_moves = 0
 
         while True:
+            logger.debug('Running calibrate tool..')
             if str(tool) not in "endstop":
                 (self.xy, self.target, self.tool_coordinates, self.radius) = self.analyzeFrame()
             else:
                 (self.xy, self.tool_coordinates) = self.analyzeEndstop()
-            
+            logger.debug('Captured reference.')
             # analyzeFrame has returned our target coordinates, average its location and process according to state
             self.average_location[0] += self.xy[0]
             self.average_location[1] += self.xy[1]
@@ -1028,6 +1029,7 @@ class CalibrateNozzles(QThread):
                 
                 #### Step 1: camera calibration and transformation matrix calculation
                 if self.state == 0:
+                    logger.debug('Starting camera calibration..')
                     self.parent().debugString += 'Calibrating camera...\n'
                     # Update GUI thread with current status and percentage complete
                     self.status_update.emit('Calibrating camera..')
@@ -1044,12 +1046,14 @@ class CalibrateNozzles(QThread):
                     # move carriage for calibration
                     self.offsetX = self.calibrationCoordinates[0][0]
                     self.offsetY = self.calibrationCoordinates[0][1]
+                    logger.debug('Moving carriage..')
                     self.parent().printer.gCode('G91 G1 X' + str(self.offsetX) + ' Y' + str(self.offsetY) +' F3000 G90 ')
                     # Update state tracker to second nozzle calibration move
                     self.state = 1
                     continue
                 # Check if camera is still being calibrated
                 elif self.state >= 1 and self.state < len(self.calibrationCoordinates):
+                    logger.debug('Moving carriage again..')
                     # Update GUI thread with current status and percentage complete
                     self.status_update.emit('Calibrating camera..')
                     self.message_update.emit('Calibrating rotation.. (' + str(self.state*10) + '%)')
@@ -1066,15 +1070,19 @@ class CalibrateNozzles(QThread):
                     self.offsetX = -1*self.offsetX
                     self.offsetY = -1*self.offsetY
                     self.parent().printer.gCode('G91 G1 X' + str(self.offsetX) + ' Y' + str(self.offsetY) +' F3000 G90 ')
+                    logger.debug('Moving carriage again: sent gCode..')
                     # move carriage a random amount in X&Y to collect datapoints for transform matrix
                     self.offsetX = self.calibrationCoordinates[self.state][0]
                     self.offsetY = self.calibrationCoordinates[self.state][1]
+                    logger.debug('Moving carriage again: seng gCode again..')
                     self.parent().printer.gCode('G91 G1 X' + str(self.offsetX) + ' Y' + str(self.offsetY) +' F3000 G90 ')
                     # increment state tracker to next calibration move
                     self.state += 1
+                    logger.debug('Moving carriage next step..')
                     continue
                 # check if final calibration move has been completed
                 elif self.state == len(self.calibrationCoordinates):
+                    logger.debug('Camera calibration finalizing..')
                     calibration_time = np.around(time.time() - self.startTime,1)
                     self.parent().debugString += 'Camera calibration completed in ' + str(calibration_time) + ' seconds.\n'
                     self.parent().debugString += 'Millimeters per pixel: ' + str(self.mpp) + '\n\n'
@@ -1097,6 +1105,7 @@ class CalibrateNozzles(QThread):
                     self.newCenter = self.transform_matrix.T @ np.array([0, 0, 0, 0, 0, 1])
                     self.guess_position[0]= np.around(self.newCenter[0],3)
                     self.guess_position[1]= np.around(self.newCenter[1],3)
+                    logger.debug('finalizing calibration: sending gCode..')
                     self.parent().printer.gCode('G90 G1 X{0:-1.3f} Y{1:-1.3f} F1000 G90 '.format(self.guess_position[0],self.guess_position[1]))
                     # update state tracker to next phase
                     self.state = 200
@@ -1109,6 +1118,7 @@ class CalibrateNozzles(QThread):
                     continue
                 #### Step 2: nozzle alignment stage
                 elif self.state == 200:
+                    logger.debug('Nozzle alignment start..')
                     # Update GUI thread with current status and percentage complete
                     if str(tool) not in "endstop":
                         self.message_update.emit('Tool calibration move #' + str(self.calibration_moves))
@@ -1118,17 +1128,21 @@ class CalibrateNozzles(QThread):
                     # increment moves counter
                     self.calibration_moves += 1
                     # nozzle detected, frame rotation is set, start
+                    logger.debug('Normalizing..')
                     self.cx,self.cy = self.normalize_coords(self.xy)
                     self.v = [self.cx**2, self.cy**2, self.cx*self.cy, self.cx, self.cy, 0]
                     self.offsets = -1*(0.55*self.transform_matrix.T @ self.v)
                     self.offsets[0] = np.around(self.offsets[0],3)
                     self.offsets[1] = np.around(self.offsets[1],3)
                     # Move it a bit
+                    logger.debug('Moving nozzle for detection..')
                     self.parent().printer.gCode( 'M564 S1' )
                     self.parent().printer.gCode( 'G91 G1 X{0:-1.3f} Y{1:-1.3f} F1000 G90 '.format(self.offsets[0],self.offsets[1]) )
+                    logger.debug('Nozzle movement complete.')
                     # save position as previous position
                     self.oldxy = self.xy
                     if ( self.offsets[0] == 0.0 and self.offsets[1] == 0.0 ):
+                        logger.debug('Updating GUI..')
                         self.parent().debugString += str(self.calibration_moves) + ' moves.\n'
                         self.parent().printer.gCode( 'G1 F13200' )
                         # Update GUI with progress
@@ -1142,7 +1156,8 @@ class CalibrateNozzles(QThread):
                                 'Y' : 0,
                                 'Z' : 0
                             }
-                        if str(tool) not in "endstop":    
+                        if str(tool) not in "endstop":
+                            logger.debug('Calculating offsets.')
                             final_x = np.around( (self.cp_coordinates['X'] + self.tool_offsets['X']) - self.tool_coordinates['X'], 3 )
                             final_y = np.around( (self.cp_coordinates['Y'] + self.tool_offsets['Y']) - self.tool_coordinates['Y'], 3 )
                             string_final_x = "{:.3f}".format(final_x)
@@ -1164,6 +1179,7 @@ class CalibrateNozzles(QThread):
                         self.parent().printer.gCode( 'G1 F13200' )
 
                         if str(tool) not in "endstop":
+                            logger.debug('Generating G10 commands.')
                             self.parent().debugString += 'G10 P' + str(tool) + ' X' + string_final_x + ' Y' + string_final_y + '\n'
                             x_tableitem = QTableWidgetItem(string_final_x)
                             x_tableitem.setBackground(QColor(100,255,100,255))
