@@ -44,6 +44,8 @@ class DuetWebAPI:
 
             try:
                 firmwareName = j['firmwareName']
+                # fetch hardware board type from firmware name, character 24
+                boardVersion = firmwareName[24]
                 firmwareVersion = j['firmwareVersion']
                 if firmwareVersion[0] == "2":
                     self._rrf2 = True
@@ -86,13 +88,15 @@ class DuetWebAPI:
         try:
             if (self.pt == 2):
                 if not self._rrf2:
-                    #RRF 3 on a Duet Ethernet/Wifi board, apply buffer checking
+                    logger.debug('XX - Duet RRF 3 using rr_status endpoint')
+                    #RRF 3 using rr_status API
                     sessionURL = (f'{self._base_url}'+'/rr_connect?password=reprap')
                     r = self.requests.get(sessionURL,timeout=8)
                     if not r.ok:
                         logger.warning('Error parsing getStatus session: ' + r)
                     buffer_size = 0
                     while buffer_size < 150:
+                        logger.debug('XX - Buffering..')
                         bufferURL = (f'{self._base_url}'+'/rr_gcode')
                         buffer_request = self.requests.get(bufferURL,timeout=8)
                         try:
@@ -106,29 +110,40 @@ class DuetWebAPI:
                             logger.debug('Buffer low - adding 0.6s delay before next call: ' + str(buffer_size))
                             time.sleep(0.6)
                 while self.getStatus() not in "idle":
+                    logger.debug('XX - printer not idle _SLEEPING_')
                     time.sleep(0.5)
                 URL=(f'{self._base_url}'+'/rr_status?type=2')
+                logger.debug('XX - calling API endpoint')
                 r = self.requests.get(URL,timeout=8)
+                logger.debug('XX - endpoint reply received')
                 j = self.json.loads(r.text)
                 replyURL = (f'{self._base_url}'+'/rr_reply')
+                logger.debug('XX - calling endpoint again')
                 reply = self.requests.get(replyURL,timeout=8)
+                logger.debug('XX - coordinate response received')
                 jc=j['coords']['xyz']
                 an=j['axisNames']
                 ret=self.json.loads('{}')
                 for i in range(0,len(jc)):
                     ret[ an[i] ] = jc[i]
+                logger.debug('XX - returning coordinates')
                 return(ret)
             if (self.pt == 3):
+                logger.debug('XX - Duet RRF 3 using machine/status endpoint')
                 while self.getStatus() not in "idle":
+                    logger.debug('XX - printer not idle _SLEEPING_')
                     time.sleep(0.5)
                 URL=(f'{self._base_url}'+'/machine/status')
+                logger.debug('XX - requesting machine status')
                 r = self.requests.get(URL,timeout=8)
+                logger.debug('XX - machine reponse received')
                 j = self.json.loads(r.text)
                 if 'result' in j: j = j['result']
                 ja=j['move']['axes']
                 ret=self.json.loads('{}')
                 for i in range(0,len(ja)):
                     ret[ ja[i]['letter'] ] = ja[i]['userPosition']
+                logger.debug('XX - returning from machine/status call')
                 return(ret)
         except Exception as e1:
             logger.error('Exception occurred in getCoords: ' + e1 )

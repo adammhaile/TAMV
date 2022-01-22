@@ -629,6 +629,7 @@ class CalibrateNozzles(QThread):
                 if self.alignment:
                     logger.debug('Alignment active')
                     try:
+                        logger.debug('Setting parameters for nozzle detection alignment algorithm..')
                         if self.loose:
                             self.detect_minCircularity = 0.3
                         else: self.detect_minCircularity = 0.8
@@ -636,29 +637,38 @@ class CalibrateNozzles(QThread):
                             self.createDetector()
                             self.detector_changed = False
                         self._running = True
+                        logger.debug('Algorithm parameters set, commencing calibration..')
                         while self._running:
                             self.cycles = self.parent().cycles
                             for rep in range(self.cycles):
                                 for tool in range(self.parent().num_tools):
+                                    logger.debug('Processing events before tool')
                                     # process GUI events
                                     app.processEvents()
                                     # Update status bar
                                     self.status_update.emit('Calibrating T' + str(tool) + ', cycle: ' + str(rep+1) + '/' + str(self.cycles))
                                     # Load next tool for calibration
+                                    logger.debug('Sending tool pickup to printer..')
                                     self.parent().printer.gCode('T'+str(tool))
                                     # Move tool to CP coordinates
+                                    logger.debug('XX - Jogging tool to calibration set point..')
                                     self.parent().printer.gCode('G1 X' + str(self.parent().cp_coords['X']))
                                     self.parent().printer.gCode('G1 Y' + str(self.parent().cp_coords['Y']))
                                     self.parent().printer.gCode('G1 Z' + str(self.parent().cp_coords['Z']))
+                                    logger.debug('XX - Tool moved to calibration point.')
                                     # Wait for moves to complete
                                     while self.parent().printer.getStatus() not in 'idle':
+                                        logger.debug('XX - Waiting for printer idle status')
                                         # process GUI events
                                         app.processEvents()
+                                        logger.debug('XX - Fetching frame.')
                                         self.ret, self.cv_img = self.cap.read()
                                         if self.ret:
+                                            logger.debug('XX - Updating frame to GUI')
                                             local_img = self.cv_img
                                             self.change_pixmap_signal.emit(local_img)
                                         else:
+                                            logger.debug('XX - Video source invalid, resetting.')
                                             self.cap.open(video_src)
                                             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, camera_width)
                                             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_height)
