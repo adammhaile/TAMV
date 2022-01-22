@@ -1099,12 +1099,13 @@ class CalibrateNozzles(QThread):
                     self.offsetX = -1*self.offsetX
                     self.offsetY = -1*self.offsetY
                     self.parent().printer.gCode('G91 G1 X' + str(self.offsetX) + ' Y' + str(self.offsetY) +' F3000 G90 ')
-                    logger.debug('Moving carriage again: sent gCode..')
+                    logger.debug('Moving carriage again: sent gCode:' + 'G91 G1 X' + str(self.offsetX) + ' Y' + str(self.offsetY) +' F3000 G90 ')
                     # move carriage a random amount in X&Y to collect datapoints for transform matrix
                     self.offsetX = self.calibrationCoordinates[self.state][0]
                     self.offsetY = self.calibrationCoordinates[self.state][1]
                     logger.debug('Moving carriage again: seng gCode again..')
                     self.parent().printer.gCode('G91 G1 X' + str(self.offsetX) + ' Y' + str(self.offsetY) +' F3000 G90 ')
+                    logger.debug('Finished: ' + 'G91 G1 X' + str(self.offsetX) + ' Y' + str(self.offsetY) +' F3000 G90 ')
                     # increment state tracker to next calibration move
                     self.state += 1
                     logger.debug('Moving carriage next step..')
@@ -1167,7 +1168,7 @@ class CalibrateNozzles(QThread):
                     logger.debug('Moving nozzle for detection..')
                     self.parent().printer.gCode( 'M564 S1' )
                     self.parent().printer.gCode( 'G91 G1 X{0:-1.3f} Y{1:-1.3f} F1000 G90 '.format(self.offsets[0],self.offsets[1]) )
-                    logger.debug('Nozzle movement complete.')
+                    logger.debug('Nozzle movement complete ' + 'G91 G1 X{0:-1.3f} Y{1:-1.3f} F1000 G90 '.format(self.offsets[0],self.offsets[1]))
                     # save position as previous position
                     self.oldxy = self.xy
                     if ( self.offsets[0] == 0.0 and self.offsets[1] == 0.0 ):
