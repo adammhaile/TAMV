@@ -119,6 +119,8 @@ class DuetWebAPI:
                     ret[ an[i] ] = jc[i]
                 return(ret)
             if (self.pt == 3):
+                while self.getStatus() not in "idle":
+                    time.sleep(0.5)
                 URL=(f'{self._base_url}'+'/machine/status')
                 r = self.requests.get(URL,timeout=8)
                 j = self.json.loads(r.text)
