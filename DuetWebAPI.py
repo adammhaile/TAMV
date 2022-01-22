@@ -390,7 +390,7 @@ class DuetWebAPI:
 
     def getCurrentTool(self):
         import time
-        logger.debug('Starting getCurrentTool');
+        logger.debug('Starting getCurrentTool')
         try:
             if (self.pt == 2):
                 if not self._rrf2:
@@ -414,7 +414,7 @@ class DuetWebAPI:
                             logger.debug('Buffer low - adding 0.6s delay before next call: ' + str(buffer_size))
                             time.sleep(0.6)
                 while self.getStatus() not in "idle":
-                    logger.debug('Machine not idle, sleeping 0.5 seconds.');
+                    logger.debug('Machine not idle, sleeping 0.5 seconds.')
                     time.sleep(0.5)
                 URL=(f'{self._base_url}'+'/rr_status?type=2')
                 r = self.requests.get(URL,timeout=8)
@@ -422,6 +422,7 @@ class DuetWebAPI:
                 replyURL = (f'{self._base_url}'+'/rr_reply')
                 reply = self.requests.get(replyURL,timeout=8)
                 ret=j['currentTool']
+                logger.debug('Found current tool - exiting.')
                 return(ret)
             if (self.pt == 3):
                 URL=(f'{self._base_url}'+'/machine/status')
@@ -429,6 +430,7 @@ class DuetWebAPI:
                 j = self.json.loads(r.text)
                 if 'result' in j: j = j['result']
                 ret=j['state']['currentTool']
+                logger.debug('Found current tool - exiting.')
                 return(ret)
         except Exception as e1:
             logger.error('Unhandled exception in getCurrentTool: ' + str(e1))
