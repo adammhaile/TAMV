@@ -390,6 +390,7 @@ class DuetWebAPI:
 
     def getCurrentTool(self):
         import time
+        logger.debug('Starting getCurrentTool');
         try:
             if (self.pt == 2):
                 if not self._rrf2:
@@ -413,6 +414,7 @@ class DuetWebAPI:
                             logger.debug('Buffer low - adding 0.6s delay before next call: ' + str(buffer_size))
                             time.sleep(0.6)
                 while self.getStatus() not in "idle":
+                    logger.debug('Machine not idle, sleeping 0.5 seconds.');
                     time.sleep(0.5)
                 URL=(f'{self._base_url}'+'/rr_status?type=2')
                 r = self.requests.get(URL,timeout=8)

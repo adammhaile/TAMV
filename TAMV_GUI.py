@@ -621,10 +621,13 @@ class CalibrateNozzles(QThread):
         self.setProperty(brightness=self.brightness_default, contrast = self.contrast_default, saturation=self.saturation_default, hue=self.hue_default)
 
     def run(self):
+        logger.debug('Alignment thread starting')
         self.createDetector()
+        logger.debug('Alignment detector created.')
         while True:
             if self.detection_on:
                 if self.alignment:
+                    logger.debug('Alignment active')
                     try:
                         if self.loose:
                             self.detect_minCircularity = 0.3
@@ -675,7 +678,9 @@ class CalibrateNozzles(QThread):
                                         self.createDetector()
                                         self.detector_changed = False
                                     # Analyze frame for blobs
+                                    logger.debug('alignment analyzing frame..')
                                     (c, transform, mpp) = self.calibrateTool(tool, rep)
+                                    logger.debug('alignment analyzing frame complete')
                                     # process GUI events
                                     app.processEvents()
                                     # apply offsets to machine
@@ -1164,8 +1169,8 @@ class CalibrateNozzles(QThread):
                             x_tableitem.setBackground(QColor(100,255,100,255))
                             y_tableitem = QTableWidgetItem(string_final_y)
                             y_tableitem.setBackground(QColor(100,255,100,255))
-                            self.parent().offsets_table.setItem(tool,0,x_tableitem)
-                            self.parent().offsets_table.setItem(tool,1,y_tableitem)
+                            #self.parent().offsets_table.setItem(tool,0,x_tableitem)
+                            #self.parent().offsets_table.setItem(tool,1,y_tableitem)
 
                             self.result_update.emit({
                                 'tool': str(tool),
@@ -1798,7 +1803,9 @@ class App(QMainWindow):
         while self.video_thread.align_endstop and self.video_thread._running:
             app.processEvents()
         # Capture new position as CP
+        logger.debug('Calibrate fetching printer coordinates')
         self.cp_coords = self.printer.getCoords()
+        logger.debug('Calibrate - coordinates retrieved')
         self.cp_string = '(' + str(self.cp_coords['X']) + ', ' + str(self.cp_coords['Y']) + ')'
         self.readyToCalibrate()
 
@@ -2110,6 +2117,7 @@ class App(QMainWindow):
                 return
             else:
                 # connection succeeded, update objects accordingly
+                logger.debug('Connection made, updating objects.')
                 self._connected_flag = True
                 self.num_tools = self.printer.getNumTools()
                 self.video_thread.numTools = self.num_tools
@@ -2120,6 +2128,7 @@ class App(QMainWindow):
                     toolButton.setObjectName('tool')
                     self.toolButtons.append(toolButton)
                 # HBHBHBHBHBHB: need to add handling the tool buttons here.
+                logger.debug('Tool interface created.')
         except Exception as conn1:
             self.updateStatusbar('Cannot connect to: ' + self.printerURL )
             logger.error( 'Duet connection exception: ' + str(conn1))
@@ -2161,6 +2170,7 @@ class App(QMainWindow):
 
         # Update instructions box
         self.instructions_text.setText('Place endstop near center of preview window, and set your controlled point.')
+        logger.debug('Connect to printer completed.')
 
     def callTool(self):
         self.manual_button.setDisabled(False)
@@ -2685,6 +2695,7 @@ class App(QMainWindow):
         self.resetConnectInterface()
 
     def runCalibration(self):
+        logger.debug('Calibration setup method starting.')
         # reset debugString
         self.debugString = ''
         # prompt for user to apply results
@@ -2718,25 +2729,29 @@ class App(QMainWindow):
         self.tool_box.setVisible(False)
         self.detect_box.setVisible(False)
         self.cp_calibration_button.setDisabled(True)
+        logger.debug('Updating tool interface..')
         for i in range(self.num_tools):
             current_tool = self.printer.getG10ToolOffset(i)
             x_tableitem = QTableWidgetItem("{:.3f}".format(current_tool['X']))
             y_tableitem = QTableWidgetItem("{:.3f}".format(current_tool['Y']))
             x_tableitem.setBackground(QColor(255,255,255,255))
             y_tableitem.setBackground(QColor(255,255,255,255))
-            self.offsets_table.setVerticalHeaderItem(i,QTableWidgetItem('T'+str(i)))
-            self.offsets_table.setItem(i,0,x_tableitem)
-            self.offsets_table.setItem(i,1,y_tableitem)
+            # self.offsets_table.setVerticalHeaderItem(i,QTableWidgetItem('T'+str(i)))
+            # self.offsets_table.setItem(i,0,x_tableitem)
+            # self.offsets_table.setItem(i,1,y_tableitem)
         # get number of repeat cycles
         self.repeatSpinBox.setDisabled(True)
         self.cycles = self.repeatSpinBox.value()
 
         # create the Nozzle detection capture thread
+        logger.debug('Launching calibration threads..')
         self.video_thread.display_crosshair = True
         self.video_thread.detection_on = True
         self.video_thread.xray = False
         self.video_thread.loose = False
         self.video_thread.alignment = True
+        logger.debug('Calibration setup method exiting.')
+
 
     def toggle_xray(self):
         try:
