@@ -800,6 +800,7 @@ class CalibrateNozzles(QThread):
         self.cap.release()
 
     def analyzeFrame(self):
+        logger.debug('Starting analyzeFrame')
         # Placeholder coordinates
         xy = [0,0]
         # Counter of frames with no circle.
@@ -814,17 +815,24 @@ class CalibrateNozzles(QThread):
         #self.cap.set(cv2.CAP_PROP_FPS,25)
 
         while True and self.detection_on:
+            logger.debug('Processing events.')
             app.processEvents()
+            logger.debug('Events processed.')
+            logger.debug('Reading frame from camera.')
             self.ret, self.frame = self.cap.read()
+            logger.debug('Frame loaded.')
             if not self.ret:
                 # reset capture
+                logger.debug('Resetting camera capture!')
                 self.cap.open(video_src)
                 self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, camera_width)
                 self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_height)
                 self.cap.set(cv2.CAP_PROP_BUFFERSIZE,1)
+                logger.debug('Camera source reset.')
                 #self.cap.set(cv2.CAP_PROP_FPS,25)
                 continue
             #if self.alignment:
+            logger.debug('starting detection steps..')
             try:
                 # capture tool location in machine space before processing
                 toolCoordinates = self.parent().printer.getCoords()
@@ -837,12 +845,14 @@ class CalibrateNozzles(QThread):
             # Detection algorithm 1:
             #    gamma correction -> use Y channel from YUV -> GaussianBlur (7,7),6 -> adaptive threshold
             gammaInput = 1.2
+            logger.debug('adjusting image.')
             self.frame = self.adjust_gamma(image=self.frame, gamma=gammaInput)
             yuv = cv2.cvtColor(self.frame, cv2.COLOR_BGR2YUV)
             yuvPlanes = cv2.split(yuv)
             yuvPlanes[0] = cv2.GaussianBlur(yuvPlanes[0],(7,7),6)
             yuvPlanes[0] = cv2.adaptiveThreshold(yuvPlanes[0],255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,35,1)
             self.frame = cv2.cvtColor(yuvPlanes[0],cv2.COLOR_GRAY2BGR)
+            logger.debug('Image adjustment complete.')
             target = [int(np.around(self.frame.shape[1]/2)),int(np.around(self.frame.shape[0]/2))]
             # Process runtime algorithm changes
             if self.loose:
@@ -861,16 +871,19 @@ class CalibrateNozzles(QThread):
                 self.frame = cv2.line(cleanFrame, (target[0],    target[1]-25), (target[0],    target[1]+25), (0, 255, 0), 1)
                 self.frame = cv2.line(self.frame, (target[0]-25, target[1]   ), (target[0]+25, target[1]   ), (0, 255, 0), 1)
             else: self.frame = cleanFrame
+            logger.debug('Image processing and display done.')
             # update image
             local_img = self.frame
             self.change_pixmap_signal.emit(local_img)
             if(nocircle> 25):
+                logger.debug('Error detecting nozzle.')
                 self.message_update.emit( 'Error in detecting nozzle.' )
                 nocircle = 0
                 continue
             num_keypoints=len(keypoints)
             if (num_keypoints == 0):
                 if (25 < (int(round(time.time() * 1000)) - rd)):
+                    logger.debug('No circles found.')
                     nocircle += 1
                     self.frame = self.putText(self.frame,'No circles found',offsety=3)
                     self.message_update.emit( 'No circles found.' )
@@ -879,6 +892,7 @@ class CalibrateNozzles(QThread):
                 continue
             if (num_keypoints > 1):
                 if (25 < (int(round(time.time() * 1000)) - rd)):
+                    logger.debug('Too many circles found.')
                     self.message_update.emit( 'Too many circles found. Please stop and clean the nozzle.' )
                     self.frame = self.putText(self.frame,'Too many circles found '+str(num_keypoints),offsety=3, color=(255,255,255))
                     self.frame = cv2.drawKeypoints(self.frame, keypoints, np.array([]), (255,255,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
@@ -886,10 +900,12 @@ class CalibrateNozzles(QThread):
                     self.change_pixmap_signal.emit(local_img)
                 continue
             # Found one and only one circle.  Put it on the frame.
+            logger.debug('Nozzle detected successfully.')
             nocircle = 0 
             xy = np.around(keypoints[0].pt)
             r = np.around(keypoints[0].size/2)
             # draw the blobs that look circular
+            logger.debug('Drawing keypoints.')
             self.frame = cv2.drawKeypoints(self.frame, keypoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
             # Note its radius and position
             ts =  'U{0:3.0f} V{1:3.0f} R{2:2.0f}'.format(xy[0],xy[1],r)
@@ -897,6 +913,7 @@ class CalibrateNozzles(QThread):
             #self.frame = self.putText(self.frame, ts, offsety=2, color=(0, 255, 0), stroke=2)
             self.message_update.emit(ts)
             # show the frame
+            logger.debug('Displaying detected nozzle.')
             local_img = self.frame
             self.change_pixmap_signal.emit(local_img)
             rd = int(round(time.time() * 1000))
@@ -904,8 +921,10 @@ class CalibrateNozzles(QThread):
             break
         # and tell our parent.
         if self.detection_on:
+            logger.debug('Nozzle detection complete, exiting')
             return (xy, target, toolCoordinates, r)
         else:
+            logger.debug('AnaylzeFrame completed.')
             return
 
     def analyzeEndstop(self):
